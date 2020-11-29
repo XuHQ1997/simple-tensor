@@ -9,12 +9,12 @@ Alloc& Alloc::self() {
     return alloc;
 }
 
-void* Alloc::__allocate(index_t size) {
-    auto iter = cache.find(size);
+void* Alloc::allocate(index_t size) {
+    auto iter = self().cache_.find(size);
     void* res;
-    if(iter != cache.end()) {
+    if(iter != self().cache_.end()) {
         res = iter->second.release();
-        cache.erase(iter);
+        self().cache_.erase(iter);
     } else {
         res = std::malloc(size);
         CHECK_NOT_NULL(res, "failed to allocate %d memory.", size);
@@ -22,8 +22,7 @@ void* Alloc::__allocate(index_t size) {
     return res;
 }
 
-void Alloc::__deallocate(void* ptr, index_t size) {
-    cache.emplace(size, ptr);
+void Alloc::deallocate(void* ptr, index_t size) {
+    self().cache_.emplace(size, ptr);
 }
-
 } // namespace st

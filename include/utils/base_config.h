@@ -3,7 +3,7 @@
 
 namespace st {
 
-using index_t = int;
+using index_t = unsigned int;
 using data_t = double;
 
 template<typename Dtype> class DynamicArray;
