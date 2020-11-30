@@ -42,7 +42,7 @@ public:
 private:
     index_t size_;
     // decltype(Alloc::unique_allocate<Dtype>(0)) dptr_;
-    std::unique_ptr<Dtype, Alloc::delete_handler> dptr_;
+    std::unique_ptr<Dtype, Alloc::trivial_delete_handler> dptr_;
 };
 
 

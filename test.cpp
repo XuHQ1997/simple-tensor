@@ -15,6 +15,53 @@
 using std::cout;
 using std::endl;
 
+struct Foo {
+    static int ctr_call_counter;
+    static int dectr_call_counter;
+
+    char x_;
+    char y_;
+    Foo() { ++ctr_call_counter; }
+    Foo(char x, char y) : x_(x), y_(y) { ++ctr_call_counter; }
+    ~Foo() { ++dectr_call_counter; }
+};
+int Foo::ctr_call_counter = 0;
+int Foo::dectr_call_counter = 0;
+
+void test_allocator() {
+    using namespace st;
+    
+    void* ptr;
+    {
+        // No constructor call here.
+        auto uptr = Alloc::unique_allocate<Foo>(sizeof(Foo));
+        CHECK_EQUAL(Foo::ctr_call_counter, 0, "check 1");
+        ptr = uptr.get();
+    }
+    CHECK_EQUAL(Foo::dectr_call_counter, 0, "check 1");
+
+    {
+        auto sptr = Alloc::shared_allocate<Foo>(sizeof(Foo));
+        // The strategy of allocator.
+        CHECK_EQUAL(ptr, static_cast<void*>(sptr.get()), "check 2");
+    }
+    
+    {
+        auto uptr = Alloc::unique_construct<Foo>();
+        CHECK_EQUAL(Foo::ctr_call_counter, 1, "check 3");
+        CHECK_EQUAL(ptr, static_cast<void*>(uptr.get()), "check 3");
+    }
+    CHECK_EQUAL(Foo::dectr_call_counter, 1, "check 3");
+
+    {
+        auto sptr = Alloc::shared_construct<Foo>('6', '7');
+        CHECK_EQUAL(Foo::ctr_call_counter, 2, "check 4");
+        CHECK_TRUE(sptr->x_ == '6' && sptr->y_ == '7', "check 4");
+        CHECK_EQUAL(ptr, static_cast<void*>(sptr.get()), "check 4");
+    }
+    CHECK_EQUAL(Foo::dectr_call_counter, 2, "check 4");
+}
+
 void test_tensor() {
     using namespace st;
 
@@ -107,8 +154,11 @@ void test_tensor() {
 
 
 int main() {
-    cout << "test_tensor()" << endl;
-    test_tensor();
+    cout << "test allocator." << endl;
+    test_allocator();
+
+    // cout << "test tensor" << endl;
+    // test_tensor();
 
 
     return 0;

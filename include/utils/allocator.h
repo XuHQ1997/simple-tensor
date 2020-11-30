@@ -4,7 +4,7 @@
 #include <cstdlib>
 #include <map>
 #include <memory>
-#include <functional>
+#include <utility>
 
 #include "utils/base_config.h"
 
@@ -12,12 +12,21 @@ namespace st {
 
 class Alloc {
 public:
-    class delete_handler {
+    class trivial_delete_handler {
     public:
-        delete_handler(index_t size_) : size(size_) {}
+        trivial_delete_handler(index_t size_) : size(size_) {}
         void operator()(void* ptr) { deallocate(ptr, size); }
     private:
         index_t size;
+    };
+
+    template<typename T>
+    class nontrivial_delete_handler {
+    public:
+        void operator()(void* ptr) {
+            static_cast<T*>(ptr)->~T();
+            deallocate(ptr, sizeof(T));
+        }
     };
 
     // I know it's weird here. The type has been already passed in as T, but the
@@ -32,16 +41,38 @@ public:
         void* raw_ptr = allocate(nbytes);
         return std::shared_ptr<T>(
             static_cast<T*>(raw_ptr),
-            delete_handler(nbytes)
+            trivial_delete_handler(nbytes)
         );
     }
 
     template<typename T>
-    static std::unique_ptr<T, delete_handler> unique_allocate(index_t nbytes) {
+    static std::unique_ptr<T, trivial_delete_handler> 
+    unique_allocate(index_t nbytes) {
         void* raw_ptr = allocate(nbytes);
-        return std::unique_ptr<T, delete_handler>(
+        return std::unique_ptr<T, trivial_delete_handler>(
             static_cast<T*>(raw_ptr),
-            delete_handler(nbytes)
+            trivial_delete_handler(nbytes)
+        );
+    }
+
+    template<typename T, typename... Args>
+    static std::shared_ptr<T> shared_construct(Args&&... args) {
+        void* raw_ptr = allocate(sizeof(T));
+        new(raw_ptr) T(std::forward<Args>(args)...);
+        return std::shared_ptr<T>(
+            static_cast<T*>(raw_ptr),
+            nontrivial_delete_handler<T>()
+        );
+    }
+
+    template<typename T, typename... Args>
+    static std::unique_ptr<T, nontrivial_delete_handler<T>> 
+    unique_construct(Args&&... args) {
+        void* raw_ptr = allocate(sizeof(T));
+        new(raw_ptr) T(std::forward<Args>(args)...);
+        return std::unique_ptr<T, nontrivial_delete_handler<T>>(
+            static_cast<T*>(raw_ptr),
+            nontrivial_delete_handler<T>()
         );
     }
 private:
@@ -56,9 +87,6 @@ private:
     };
     std::multimap<index_t, std::unique_ptr<void, free_deletor>> cache_;
 };
-
-template std::unique_ptr<index_t, Alloc::delete_handler>
-Alloc::unique_allocate(index_t bnytes);
 
 } // namespace st
 #endif
