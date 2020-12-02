@@ -3,18 +3,15 @@ CXX_FLAGS := -std=c++11
 
 BIN := bin
 INCLUDE := include
-SRC := src 
+SRC := src
 
-folders = tensor utils
-all_header_files = $(foreach folder, $(folders), $(wildcard $(INCLUDE)/$(folder)/*.h))
+folders = exp tensor utils
+all_header_files  = $(foreach folder, $(folders), $(wildcard $(INCLUDE)/$(folder)/*.h))
+all_src_files     = $(foreach folder, $(folders), $(wildcard $(SRC)/$(folder)/*.cpp))
+all_src_basenames = $(basename $(notdir $(all_src_files)))
+all_objects       = $(addprefix $(BIN)/, $(addsuffix .o, $(all_src_basenames)))
 
-tensor_basenames := tensor_impl storage shape
-tensor_objects := $(foreach name, $(tensor_basenames), $(BIN)/$(name).o)
-
-utils_basenames := allocator exception
-utils_objects := $(foreach name, $(utils_basenames), $(BIN)/$(name).o)
-
-test: $(BIN)/test.o $(tensor_objects) $(utils_objects)
+test: $(BIN)/test.o $(all_objects)
 	$(CXX) $(CXX_FLAGS) -I $(INCLUDE) -o $(BIN)/test $^
 
 $(BIN)/test.o: test.cpp $(all_header_files)
@@ -42,9 +39,15 @@ $(BIN)/storage.o: src\tensor\storage.cpp include/tensor/storage.h \
  include/utils/base_config.h include/utils/allocator.h
 	$(CXX) $(CXX_FLAGS) -I $(INCLUDE) -c -o $(BIN)/storage.o src\tensor\storage.cpp
 
+$(BIN)/tensor.o: src\tensor\tensor.cpp include/tensor/tensor.h include/exp/exp.h \
+ include/utils/allocator.h include/utils/base_config.h \
+ include/tensor/tensor_impl.h include/tensor/storage.h \
+ include/tensor/shape.h include/utils/array.h
+	$(CXX) $(CXX_FLAGS) -I $(INCLUDE) -c -o $(BIN)/tensor.o src\tensor\tensor.cpp
+
 $(BIN)/tensor_impl.o: src\tensor\tensor_impl.cpp include/tensor/tensor_impl.h \
- include/tensor/storage.h include/utils/base_config.h \
- include/utils/allocator.h include/tensor/shape.h include/utils/array.h \
+ include/exp/exp.h include/utils/allocator.h include/utils/base_config.h \
+ include/tensor/storage.h include/tensor/shape.h include/utils/array.h \
  include/utils/exception.h
 	$(CXX) $(CXX_FLAGS) -I $(INCLUDE) -c -o $(BIN)/tensor_impl.o src\tensor\tensor_impl.cpp
 

@@ -7,6 +7,7 @@
 #include "tensor/shape.h"
 #include "tensor/storage.h"
 #include "tensor/tensor_impl.h"
+#include "tensor/tensor.h"
 #include "utils/base_config.h"
 #include "utils/array.h"
 #include "tensor/shape.h"
@@ -28,7 +29,7 @@ struct Foo {
 int Foo::ctr_call_counter = 0;
 int Foo::dectr_call_counter = 0;
 
-void test_allocator() {
+void test_Alloc() {
     using namespace st;
     
     void* ptr;
@@ -62,18 +63,18 @@ void test_allocator() {
     CHECK_EQUAL(Foo::dectr_call_counter, 2, "check 4");
 }
 
-void test_tensor() {
+void test_Tensor() {
     using namespace st;
 
     data_t data[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
     index_t idata[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
 
     cout << "check 1" << endl;
-    st::Tensor t1(data, {3, 4});
+    st::Tensor t1(data, Shape({3, 4}));
     cout << t1 << endl;
     for(index_t i = 0, idx = -1; i < 3; ++i) {
         for(index_t j = 0; j < 4; ++j) {
-            // Tensor::operator[](initilize_list<index_t>) will return a result of type data_t,
+            // TensorImpl::operator[](initilize_list<index_t>) will return a result of type data_t,
             // but as we know, we can't check whether two double vars are equal.
             int value = t1[{i, j}];
             CHECK_EQUAL(value, data[++idx], "check 1");
@@ -152,14 +153,16 @@ void test_tensor() {
     }
 }
 
-
 int main() {
+    using namespace st;
     cout << "test allocator." << endl;
-    test_allocator();
+    test_Alloc();
 
-    // cout << "test tensor" << endl;
-    // test_tensor();
+    cout << "test tensor" << endl;
+    test_Tensor();
 
-
+    CHECK_TRUE(Alloc::all_clear(), "check memory all clear");
+    cout << "test success" << endl;
     return 0;
 }
+

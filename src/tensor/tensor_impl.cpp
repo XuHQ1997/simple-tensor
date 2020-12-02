@@ -8,7 +8,7 @@
 
 namespace st {
 
-Tensor::Tensor(const Storage& storage, 
+TensorImpl::TensorImpl(const Storage& storage, 
                const Shape& shape, 
                const IndexArray& stride, 
                bool requires_grad)
@@ -17,7 +17,7 @@ Tensor::Tensor(const Storage& storage,
           stride_(stride),
           requires_grad_(requires_grad_) {}
 
-Tensor::Tensor(const Storage& storage, const Shape& shape, bool requires_grad) 
+TensorImpl::TensorImpl(const Storage& storage, const Shape& shape, bool requires_grad) 
         : storage_(storage), 
           shape_(shape), 
           stride_(shape_.ndim()), 
@@ -27,13 +27,13 @@ Tensor::Tensor(const Storage& storage, const Shape& shape, bool requires_grad)
         stride_[i] = shape_[i] == 1 ? 0 : shape_.subsize(i + 1);
 }
 
-Tensor::Tensor(const Shape& shape, bool requires_grad)
-        : Tensor(Storage(shape.dsize()), shape, requires_grad) {}
+TensorImpl::TensorImpl(const Shape& shape, bool requires_grad)
+        : TensorImpl(Storage(shape.dsize()), shape, requires_grad) {}
 
-Tensor::Tensor(const data_t* data, const Shape& shape, bool requires_grad)
-        : Tensor(Storage(data, shape.dsize()), shape, requires_grad) {}
+TensorImpl::TensorImpl(const data_t* data, const Shape& shape, bool requires_grad)
+        : TensorImpl(Storage(data, shape.dsize()), shape, requires_grad) {}
 
-Tensor::Tensor(Storage&& storage, 
+TensorImpl::TensorImpl(Storage&& storage, 
        Shape&& shape, 
        IndexArray&& stride, 
        bool requires_grad)
@@ -42,14 +42,14 @@ Tensor::Tensor(Storage&& storage,
           stride_(std::move(stride)),
           requires_grad_(requires_grad) {}
 
-bool Tensor::is_contiguous(void) const {
+bool TensorImpl::is_contiguous(void) const {
     for(index_t i = 0; i < stride_.size(); i++)
         if(stride_[i] != 0 && stride_[i] != shape_.subsize(i+1))
             return false;
     return true;
 }
 
-data_t& Tensor::operator[](std::initializer_list<index_t> ids) {
+data_t& TensorImpl::operator[](std::initializer_list<index_t> ids) {
     CHECK_EQUAL(ndim(), ids.size(),
         "Invalid %dD indices for %dD tensor", ids.size(), ndim());
 
@@ -62,7 +62,7 @@ data_t& Tensor::operator[](std::initializer_list<index_t> ids) {
     return storage_[offset]; 
 }
 
-data_t Tensor::operator[](std::initializer_list<index_t> ids) const {
+data_t TensorImpl::operator[](std::initializer_list<index_t> ids) const {
     CHECK_EQUAL(ndim(), ids.size(),
         "Invalid %dD indices for %dD tensor", ids.size(), ndim());
 
@@ -75,13 +75,14 @@ data_t Tensor::operator[](std::initializer_list<index_t> ids) const {
     return storage_[offset]; 
 }
 
-inline data_t Tensor::item(void) const {
+data_t TensorImpl::item(void) const {
     CHECK_TRUE(ndim() == 1 && size(0) == 1,
         "Only one element tensors can be converted to scalars");
     return storage_[0];
 }
 
-Tensor Tensor::slice(index_t idx, index_t dim) const {
+Alloc::NontrivialUniquePtr<TensorImpl>
+TensorImpl::slice(index_t idx, index_t dim) const {
     CHECK_IN_RANGE(dim, 0, ndim(),
         "Dimension out of range (expected to be in range of [0, %d), but got %d)", 
         ndim(), dim);
@@ -102,11 +103,13 @@ Tensor Tensor::slice(index_t idx, index_t dim) const {
     for(; i < stride.size(); i++)
         stride[i] = stride_[i+1];
 
-    return Tensor(std::move(storage), std::move(shape), std::move(stride), false);
-    // return Tensor(storage, shape, stride, false);
+    return Alloc::unique_construct<TensorImpl>(
+        std::move(storage), std::move(shape), std::move(stride), false
+    );
 }
 
-Tensor Tensor::slice(index_t start_idx, index_t end_idx, index_t dim) const {
+Alloc::NontrivialUniquePtr<TensorImpl>
+TensorImpl::slice(index_t start_idx, index_t end_idx, index_t dim) const {
     CHECK_IN_RANGE(dim, 0, ndim(),
         "Dimension out of range (expected to be in range of [0, %d), but got %d)",
         ndim(), dim);
@@ -125,10 +128,13 @@ Tensor Tensor::slice(index_t start_idx, index_t end_idx, index_t dim) const {
     Shape shape(shape_);
     shape[dim] = end_idx - start_idx;
 
-    return Tensor(std::move(storage), std::move(shape), std::move(stride), false);
+    return Alloc::unique_construct<TensorImpl>(
+        std::move(storage), std::move(shape), std::move(stride), false
+    );
 }
 
-Tensor Tensor::transpose(index_t dim1, index_t dim2) const {
+Alloc::NontrivialUniquePtr<TensorImpl>
+TensorImpl::transpose(index_t dim1, index_t dim2) const {
     CHECK_IN_RANGE(dim1, 0, ndim(),
         "Dimension out of range (expected to be in range of [0, %d), but got %d)", 
         ndim(), dim1);
@@ -148,10 +154,13 @@ Tensor Tensor::transpose(index_t dim1, index_t dim2) const {
     stride[dim1] = stride_[dim2];
     stride[dim2] = stride_[dim1];
 
-    return Tensor(std::move(storage), std::move(shape), std::move(stride), false);
+    return Alloc::unique_construct<TensorImpl>(
+        std::move(storage), std::move(shape), std::move(stride), false
+    );
 }
 
-Tensor Tensor::view(const Shape& shape) const {
+Alloc::NontrivialUniquePtr<TensorImpl>
+TensorImpl::view(const Shape& shape) const {
     CHECK_TRUE(is_contiguous(),
         "view() is only supported to contiguous tensor");
     CHECK_EQUAL(shape.dsize(), shape_.dsize(),
@@ -159,10 +168,13 @@ Tensor Tensor::view(const Shape& shape) const {
         shape.dsize(), shape_.dsize());
     // new_dptr = dptr
     // Just use new shape and adjust stride.
-    return Tensor(storage_, shape, false);    
+    return Alloc::unique_construct<TensorImpl>(
+        storage_, shape, false
+    );
 }
 
-Tensor Tensor::squeeze(void) const {
+Alloc::NontrivialUniquePtr<TensorImpl>
+TensorImpl::squeeze(void) const {
     index_t count = 0;
     auto squeeze_dims_ptr = Alloc::unique_allocate<index_t>(ndim() * sizeof(index_t));
     auto squeeze_dims = squeeze_dims_ptr.get();
@@ -174,7 +186,8 @@ Tensor Tensor::squeeze(void) const {
     return view(squeeze_shape);
 }
 
-Tensor Tensor::unsqueeze(index_t dim) const {
+Alloc::NontrivialUniquePtr<TensorImpl>
+TensorImpl::unsqueeze(index_t dim) const {
     index_t new_ndim = ndim() + 1;
     CHECK_IN_RANGE(dim, 0, new_ndim,
         "Dimension out of range (expected to be in range of [0, %d), but got %d)", 
@@ -193,8 +206,8 @@ Tensor Tensor::unsqueeze(index_t dim) const {
     return view(Shape(unsqueeze_dims, new_ndim));
 }
 
-std::ostream& operator<<(std::ostream& out, const Tensor& src) {
-    Tensor t(src);
+std::ostream& operator<<(std::ostream& out, const TensorImpl& src) {
+    TensorImpl t(src);
     t.requires_grad_ = false;
 
     std::ios_base::fmtflags flags = out.flags();
@@ -208,17 +221,17 @@ std::ostream& operator<<(std::ostream& out, const Tensor& src) {
             out << ", " << t[{i}];
         } 
     } else if(t.ndim() == 2) {
-        out << t.slice(0);
+        out << *t.slice(0);
         for(index_t i = 1; i < t.size(0); i++) {
             out << ',' << std::endl;
-            out << t.slice(i);
+            out << *t.slice(i);
         }
     } else {
-        out << t.slice(0);
+        out << *t.slice(0);
         for(index_t i = 1; i < t.size(0); i++) {
             out << ',' << std::endl;
             out << std::endl;
-            out << t.slice(i);
+            out << *t.slice(i);
         }
     }
     out << ']';

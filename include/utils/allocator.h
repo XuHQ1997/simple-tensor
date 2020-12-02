@@ -29,6 +29,12 @@ public:
         }
     };
 
+    template<typename T> 
+    using TrivialUniquePtr = std::unique_ptr<T, trivial_delete_handler>;
+
+    template<typename T>
+    using NontrivialUniquePtr = std::unique_ptr<T, nontrivial_delete_handler<T>>;
+
     // I know it's weird here. The type has been already passed in as T, but the
     // function parameter still need the number of bytes, instead of objects.
     // And their relationship is 
@@ -46,10 +52,9 @@ public:
     }
 
     template<typename T>
-    static std::unique_ptr<T, trivial_delete_handler> 
-    unique_allocate(index_t nbytes) {
+    static TrivialUniquePtr<T> unique_allocate(index_t nbytes) {
         void* raw_ptr = allocate(nbytes);
-        return std::unique_ptr<T, trivial_delete_handler>(
+        return TrivialUniquePtr<T>(
             static_cast<T*>(raw_ptr),
             trivial_delete_handler(nbytes)
         );
@@ -66,21 +71,26 @@ public:
     }
 
     template<typename T, typename... Args>
-    static std::unique_ptr<T, nontrivial_delete_handler<T>> 
-    unique_construct(Args&&... args) {
+    static NontrivialUniquePtr<T> unique_construct(Args&&... args) {
         void* raw_ptr = allocate(sizeof(T));
         new(raw_ptr) T(std::forward<Args>(args)...);
-        return std::unique_ptr<T, nontrivial_delete_handler<T>>(
+        return NontrivialUniquePtr<T>(
             static_cast<T*>(raw_ptr),
             nontrivial_delete_handler<T>()
         );
     }
+
+    static bool all_clear(void);
+
 private:
     Alloc() = default;
     ~Alloc() = default;
     static Alloc& self();
     static void* allocate(index_t size);
     static void deallocate(void* ptr, index_t size);
+
+    static index_t allocate_memory_size;
+    static index_t deallocate_memory_size;
 
     struct free_deletor {
         void operator()(void* ptr) { std::free(ptr); }

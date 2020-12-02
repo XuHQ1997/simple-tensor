@@ -1,26 +1,27 @@
 #ifndef TENSOR_TENSOR_IMPL_H
 #define TENSOR_TENSOR_IMPL_H
 
+#include "exp/exp.h"
 #include "tensor/storage.h"
 #include "tensor/shape.h"
 
 namespace st {
 
-class Tensor {
+class TensorImpl : public ExpImpl<TensorImpl> {
 public:
     // constructor
-    Tensor(const Storage& storage, const Shape& shape, const IndexArray& stride,
+    TensorImpl(const Storage& storage, const Shape& shape, const IndexArray& stride,
            bool requires_grad=false);
-    Tensor(const Storage& storage, const Shape& shape, 
+    TensorImpl(const Storage& storage, const Shape& shape, 
            bool requires_grad=false);
-    Tensor(const data_t* data, const Shape& shape, 
+    TensorImpl(const data_t* data, const Shape& shape, 
            bool requires_grad=false);
-    explicit Tensor(const Shape& shape, 
+    explicit TensorImpl(const Shape& shape, 
                     bool requires_grad=false);
-    Tensor(Storage&& storage, Shape&& shape, IndexArray&& stride, 
+    TensorImpl(Storage&& storage, Shape&& shape, IndexArray&& stride, 
            bool requires_grad=false);
-    Tensor(const Tensor& other) = default;
-    Tensor(Tensor&& other) = default;
+    TensorImpl(const TensorImpl& other) = default;
+    TensorImpl(TensorImpl&& other) = default;
 
     // inline function
     index_t ndim(void) const { return shape_.ndim(); }
@@ -37,15 +38,16 @@ public:
     data_t operator[](std::initializer_list<index_t> ids) const;
     data_t item(void) const;
 
-    Tensor slice(index_t idx, index_t dim=0) const;
-    Tensor slice(index_t start_idx, index_t end_idx, index_t dim) const;
-    Tensor transpose(index_t dim1, index_t dim2) const;
-    Tensor view(const Shape& shape) const;
-    Tensor squeeze(void) const;
-    Tensor unsqueeze(index_t dim) const;
+    Alloc::NontrivialUniquePtr<TensorImpl> slice(index_t idx, index_t dim=0) const;
+    Alloc::NontrivialUniquePtr<TensorImpl> slice(index_t start_idx, 
+                                                 index_t end_idx, index_t dim) const;
+    Alloc::NontrivialUniquePtr<TensorImpl> transpose(index_t dim1, index_t dim2) const;
+    Alloc::NontrivialUniquePtr<TensorImpl> view(const Shape& shape) const;
+    Alloc::NontrivialUniquePtr<TensorImpl> squeeze(void) const;
+    Alloc::NontrivialUniquePtr<TensorImpl> unsqueeze(index_t dim) const;
 
     // friend function
-    friend std::ostream& operator<<(std::ostream& out, const Tensor& t);
+    friend std::ostream& operator<<(std::ostream& out, const TensorImpl& t);
 private:
     Storage storage_;
     Shape shape_;
