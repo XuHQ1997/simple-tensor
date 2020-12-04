@@ -3,6 +3,7 @@
 
 #include <cstdio>
 #include <exception>
+#include <algorithm>
 
 namespace st {
 namespace err {
@@ -25,6 +26,7 @@ struct Error: public std::exception {
     throw err::Error(ERROR_LOCATION);	\
 } while(0)
 
+#ifndef CANCEL_CHECK
 // base assert macro
 #define CHECK_TRUE(expr, format, ...) \
     if(!(expr)) THROW_ERROR((format), ##__VA_ARGS__)
@@ -49,10 +51,24 @@ struct Error: public std::exception {
             i, (e1).size(i), (e2).size(i)); \
 } while(0)
 
+#define CHECK_EXP_BROADCAST(e1, e2) do { \
+    index_t min_dim = std::min((e1).ndim(), (e2).ndim()); \
+    for(index_t i = 0; i < min_dim; ++i)  \
+        CHECK_TRUE((e1).size(i) == (e2).size(i) || (e1).size(i) == 1 || (e2).size(i) == 1, \
+            "The size on %d dimension, %d and %d, can't be broadcasted.", \
+            i, (e1).size(i), (e2).size(i));  \
+} while(0)
 
-// #define CHECK_BROADCAST(e1, e2, format, ...) do {\
-//     for() 
-// } while(0)
+#else  // ifndef CANCEL_CHECK
+
+#define CHECK_TRUE(expr, format, ...) {}
+#define CHECK_NOT_NULL(ptr, format, ...) {}
+#define CHECK_EQUAL(x, y, format, ...) {}
+#define CHECK_IN_RANGE(x, lower, upper, format, ...) {}
+#define CHECK_EXP_SAME_SHAPE(e1, e2) {}
+#define CHECK_EXP_BROADCAST(e1, e2) {}
+
+#endif
 
 }  // namespace st
 #endif

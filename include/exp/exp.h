@@ -30,6 +30,7 @@ public:
             :impl_ptr_(std::move(ptr)) {}
     const ExpImplPtr<ImplType>& impl_ptr(void) const { return impl_ptr_; }
     const ImplType& impl(void) const { return *impl_ptr_; }
+    
 protected:
     ExpImplPtr<ImplType> impl_ptr_;
 };

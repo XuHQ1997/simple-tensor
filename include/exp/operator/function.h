@@ -2,7 +2,8 @@
 #define EXP_FUNCTION_H
 
 #include "exp/operator/basic_op.h"
-#include "exp/exp_impl.h"
+#include "exp/operator/broadcast_op.h"
+#include "utils/allocator.h"
 #include "utils/exception.h"
 
 namespace st {
@@ -33,6 +34,7 @@ binary_operation_function(const Exp<LhsImplType>& lhs, const Exp<RhsImplType>& r
 }
 }  // namespace
 
+// function for basic operation
 template<typename OIType>
 Exp<UnaryExpImpl<Minus, OIType>>
 minus(const Exp<OIType>& operand) {
@@ -78,6 +80,28 @@ template<typename LhsImplType, typename RhsImplType>
 Exp<BinaryExpImpl<Sub, LhsImplType, RhsImplType>>
 operator-(const Exp<LhsImplType>& lhs, const Exp<RhsImplType>& rhs) {
     return sub<LhsImplType, RhsImplType>(lhs, rhs);
+}
+
+// function for broadcasting operation
+template<typename LhsImplType, typename RhsImplType>
+Exp<BinaryExpImpl<BroadcastAdd, LhsImplType, RhsImplType>>
+broadcast_add(const Exp<LhsImplType>& lhs, const Exp<RhsImplType>& rhs) {
+    CHECK_EXP_BROADCAST(lhs.impl(), rhs.impl());
+    return binary_operation_function<BroadcastAdd, LhsImplType, RhsImplType>(lhs, rhs);
+}
+
+template<typename LhsImplType, typename RhsImplType>
+Exp<BinaryExpImpl<BroadcastMul, LhsImplType, RhsImplType>>
+broadcast_mul(const Exp<LhsImplType>& lhs, const Exp<RhsImplType>& rhs) {
+    CHECK_EXP_BROADCAST(lhs.impl(), rhs.impl());
+    return binary_operation_function<BroadcastMul, LhsImplType, RhsImplType>(lhs, rhs);
+}
+
+template<typename LhsImplType, typename RhsImplType>
+Exp<BinaryExpImpl<BroadcastSub, LhsImplType, RhsImplType>>
+broadcast_sub(const Exp<LhsImplType>& lhs, const Exp<RhsImplType>& rhs) {
+    CHECK_EXP_BROADCAST(lhs.impl(), rhs.impl());
+    return binary_operation_function<BroadcastSub, LhsImplType, RhsImplType>(lhs, rhs);
 }
 
 

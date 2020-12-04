@@ -27,6 +27,9 @@ public:
                     bool requires_grad=false);
     Tensor(TensorImpl&& impl);
     Tensor(Alloc::NontrivialUniquePtr<TensorImpl>&& ptr);
+
+    template<typename ImplType> Tensor(const Exp<ImplType>& exp);
+    
     Tensor(const Tensor& other) = default;
     Tensor(Tensor&& other) = default;
 
@@ -57,13 +60,19 @@ public:
     friend std::ostream& operator<<(std::ostream& out, const Tensor& t);
 };
 
+template<typename ImplType> Tensor::Tensor(const Exp<ImplType>& exp)
+        : Exp<TensorImpl>(
+            Alloc::unique_construct<TensorImpl>(exp.impl().size())) {
+    impl_ptr_->operator=(exp.impl());
+}
+
 template<typename ImplType> Tensor& Tensor::operator=(const Exp<ImplType>& exp) {
-    impl_ptr_->operator=(*exp.impl_ptr());
+    impl_ptr_->operator=(exp.impl());
     return *this;
 }
 
 template<typename ImplType> Tensor& Tensor::operator+=(const Exp<ImplType>& exp) {
-    impl_ptr_->operator+=(*exp.impl_ptr());
+    impl_ptr_->operator+=(exp.impl());
     return *this;
 }
 

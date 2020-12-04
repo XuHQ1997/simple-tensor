@@ -14,6 +14,8 @@ Shape::Shape(const Shape& other, index_t skip) : dims_(other.ndim() - 1) {
 
 Shape::Shape(index_t* dims, index_t dim_) : dims_(dims, dim_) {}
 
+Shape::Shape(IndexArray&& shape) : dims_(std::move(shape)) {}
+
 index_t Shape::dsize() const {
     int res = 1;
     for(int i = 0; i < dims_.size(); ++i)

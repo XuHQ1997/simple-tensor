@@ -7,6 +7,7 @@
 #include "utils/allocator.h"
 #include "utils/base_config.h"
 #include "utils/type_traits.h"
+#include "utils/array.h"
 #include "exp/operator/basic_op.h"
 
 namespace st {
@@ -62,12 +63,14 @@ public:
     explicit UnaryExpImpl(const OperandImplPtr<OIType>& ptr)
             : operand_ptr_(ptr) {}
     
-    index_t ndim(void) const {
-        return Op::ndim(*operand_ptr_);
-    }
+    index_t ndim(void) const { return Op::ndim(*operand_ptr_); }
+    index_t size(index_t idx) const { return Op::size(idx, *operand_ptr_); }
 
-    index_t size(index_t idx) const {
-        return Op::size(idx, *operand_ptr_);
+    IndexArray size(void) const {
+        IndexArray shape(ndim());
+        for(index_t i = 0; i < shape.size(); ++i)
+            shape[i] = size(i);
+        return shape;
     }
 
     data_t eval(IndexArray& inds) const {
@@ -95,12 +98,14 @@ public:
             : lhs_ptr_(lhs_ptr), 
               rhs_ptr_(rhs_ptr) {}
 
-    index_t ndim(void) const {
-        return Op::ndim(*lhs_ptr_, *rhs_ptr_);
-    }
+    index_t ndim(void) const { return Op::ndim(*lhs_ptr_, *rhs_ptr_); }
+    index_t size(index_t idx) const { return Op::size(idx, *lhs_ptr_, *rhs_ptr_); }
 
-    index_t size(index_t idx) const {
-        return Op::size(idx, *lhs_ptr_, *rhs_ptr_);
+    IndexArray size(void) const {
+        IndexArray shape(ndim());
+        for(index_t i = 0; i < shape.size(); ++i)
+            shape[i] = size(i);
+        return shape;
     }
 
     data_t eval(IndexArray& inds) const {

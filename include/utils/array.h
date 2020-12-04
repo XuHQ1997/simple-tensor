@@ -25,7 +25,7 @@ public:
             ++ptr;
         }
     }
-    explicit DynamicArray(const DynamicArray<Dtype>& other) 
+    DynamicArray(const DynamicArray<Dtype>& other) 
             : DynamicArray(other.size()) {
         std::memcpy(dptr_.get(), other.dptr_.get(), size_ * sizeof(Dtype));
     }

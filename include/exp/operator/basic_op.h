@@ -2,7 +2,8 @@
 #define EXP_OPERATOR_BASIC_OP_H
 
 #include <type_traits>
-#include <algorithm>
+
+#include "utils/base_config.h"
 
 namespace st {
 namespace op {
@@ -23,11 +24,11 @@ struct BinaryBasicOperator {
     using is_elementwise = std::true_type;
     template<typename LhsType, typename RhsType>
     static index_t ndim(const LhsType& lhs, const RhsType& rhs) { 
-        return std::max(lhs.ndim(), rhs.ndim()); 
+        return lhs.ndim(); 
     }
     template<typename LhsType, typename RhsType>
     static index_t size(index_t idx, const LhsType& lhs, const RhsType& rhs) {
-        return std::max(lhs.size(idx), rhs.size(idx));
+        return lhs.size(idx);
     }
 };
 
