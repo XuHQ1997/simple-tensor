@@ -8,7 +8,7 @@ For many reasons, the repositories such as Pytorch and Tensorflow is too complic
 
 - [x] Memory management
 - [x] Basic operations of Tensor
-- [ ] Expression Templates
+- [x] Expression Templates
 - [ ] Autograd  based on Dynamic Computational Graph
 - [ ] Simple Neural Network
 
@@ -39,5 +39,5 @@ make
 make run
 ```
 
-You can learn about some interfaces in `test.cpp` .
+You can learn about How to use these code in `test.cpp` .
 

@@ -2,6 +2,9 @@
     Do some simple test here, which is not strict unit test.
 */
 
+// The next line can cancel check macro. 
+// #define CANCEL_CHECK
+
 #include <iostream>
 #include <chrono>
 
@@ -146,7 +149,7 @@ void test_Tensor() {
     }
 }
 
-void test_operation() {
+void test_basic_operation() {
     using namespace st;
 
     data_t data[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
@@ -156,8 +159,8 @@ void test_operation() {
     Tensor t3 = t1 + t2;
     for(index_t i = 0; i < 3; ++i) {
         for(index_t j = 0; j < 4; ++j) {
-            data_t value1 = t3[{i, j}];
-            data_t value2 = 2*t1[{i, j}];
+            int value1 = t3[{i, j}];
+            int value2 = 2*t1[{i, j}];
             CHECK_EQUAL(value1, value2, "check 1");
         }
     }
@@ -165,8 +168,8 @@ void test_operation() {
     t3 += t1;
     for(index_t i = 0; i < 3; ++i) {
         for(index_t j = 0; j < 4; ++j) {
-            data_t value1 = t3[{i, j}];
-            data_t value2 = 3*t1[{i, j}];
+            int value1 = t3[{i, j}];
+            int value2 = 3*t1[{i, j}];
             CHECK_EQUAL(value1, value2, "check 2");
         }
     }
@@ -174,8 +177,8 @@ void test_operation() {
     Tensor t4 = t1 * t2 + t3;
     for(index_t i = 0; i < 3; ++i) {
         for(index_t j = 0; j < 4; ++j) {
-            data_t value1 = t4[{i, j}];
-            data_t value2 = t1[{i, j}] * t2[{i, j}] + t3[{i, j}];
+            int value1 = t4[{i, j}];
+            int value2 = t1[{i, j}] * t2[{i, j}] + t3[{i, j}];
             CHECK_EQUAL(value1, value2, "check 3");
         }
     }
@@ -192,8 +195,8 @@ void test_operation() {
     Tensor t5 = exp;
     for(index_t i = 0; i < 3; ++i) {
         for(index_t j = 0; j < 4; ++j) {
-            data_t value1 = t5[{i, j}];
-            data_t value2 = t3[{i, j}] * t4[{i, j}]
+            int value1 = t5[{i, j}];
+            int value2 = t3[{i, j}] * t4[{i, j}]
                         - (t1[{i, j}] + t2[{i, j}])
                         - (-t1[{i, j}] * t2[{i, j}]);
             CHECK_EQUAL(value1, value2, "check 3");
@@ -214,12 +217,48 @@ void test_operation() {
             for(index_t k = 0; k < 3; ++k)
                 for(index_t l = 0; l < 2; ++l) 
                     for(index_t m = 0; m < 3; ++m) {
-                        data_t value1 = t9[{i, j, k, l, m}];
-                        data_t value2 = t6[{i, 0, 0, l, m}] + t7[{i, j, 0, 0, m}];
-                        value2       -= t6[{i, 0, 0, l, m}] * t8[{i, j, k}];
-                        value2       += t6[{i, 0, 0, l, m}] - t8[{i, j, k}];
+                        int value1 = t9[{i, j, k, l, m}];
+                        int value2 = t6[{i, 0, 0, l, m}] + t7[{i, j, 0, 0, m}];
+                        value2    -= t6[{i, 0, 0, l, m}] * t8[{i, j, k}];
+                        value2    += t6[{i, 0, 0, l, m}] - t8[{i, j, k}];
                         CHECK_EQUAL(value1, value2, "check 3");
                     }
+}
+
+void test_matrix_operation() {
+    using namespace st;
+
+    data_t data1[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
+    data_t data2[] = {11, 21, 31, 41, 51, 61, 71, 81, 91, 101, 111, 121};
+    Tensor t1(data1, Shape{2, 6});
+    Tensor t2(data2, Shape{2, 6});
+
+    Tensor t3 = op::matrix_mul(t1, t2.transpose(/*dim1=*/0, /*dim2=*/1));
+    data_t t3_expect[2][2] = {{931, 2191}, {2227, 5647}};
+    for(index_t i = 0; i < 2; ++i) {
+        for(index_t j = 0; j < 2; ++j) {
+            int value1 = t3[{i, j}];
+            int value2 = t3_expect[i][j];
+            CHECK_EQUAL(value1, value2, "check 1");
+        }
+    }
+
+    Tensor t4 = t1.view({3, 2, 2});
+    Tensor t5 = t2.view({3, 2, 2});
+    Tensor t6 = op::batch_matrix_mul(t4, t5);
+    data_t t6_expect[3][2][2] = {{{73, 103}, {157, 227}}, 
+                                {{681, 791}, {925, 1075}},
+                                {{1929, 2119}, {2333, 2563}}};
+    for(index_t i = 0; i < 3; ++i) {
+        for(index_t j = 0; j < 2; ++j) {
+            for(index_t k = 0; k < 2; ++k) {
+                int value1 = t6[{i, j, k}];
+                int value2 = t6_expect[i][j][k];
+                CHECK_EQUAL(value1, value2, "check 2");
+            }
+        }
+    }
+
 }
 
 int main() {
@@ -237,7 +276,10 @@ int main() {
     test_Tensor();
 
     cout << "\033[33mtest operation...\033[0m" << endl;
-    test_operation();
+    test_basic_operation();
+
+    cout << "\033[33mtest matrix operation...\033[0m" << endl;
+    test_matrix_operation();
 
     CHECK_TRUE(Alloc::all_clear(), "check memory all clear");
 

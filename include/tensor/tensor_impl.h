@@ -14,7 +14,7 @@ namespace st {
 class TensorImpl : public ExpImpl<TensorImpl> {
 public:
     // type traits for operator=.
-    using is_elementwise = std::true_type;
+    using is_elementwise = std::false_type;
     // constructor
     TensorImpl(const Storage& storage, const Shape& shape, const IndexArray& stride,
            bool requires_grad=false);
@@ -96,13 +96,6 @@ TensorImpl& TensorImpl::operator+=(const ImplType& exp_impl) {
 }
 
 template<typename ImplType>
-TensorImpl& TensorImpl::__assign(const ImplType& exp_impl, std::true_type) {
-    for(int i = 0; i < shape_.dsize(); ++i)
-        storage_[i] = exp_impl.eval(i);
-    return *this;
-}
-
-template<typename ImplType>
 TensorImpl& TensorImpl::__assign(const ImplType& exp_impl, std::false_type) {
     IndexArray inds(ndim());
     for(index_t i = 0; i < shape_.dsize(); ++i) {
@@ -118,23 +111,16 @@ TensorImpl& TensorImpl::__assign(const ImplType& exp_impl, std::false_type) {
 }
 
 template<typename ImplType>
-TensorImpl& TensorImpl::__inplacement_add(const ImplType& exp_impl, std::true_type) {
-    for(int i = 0; i < shape_.dsize(); ++i)
-        storage_[i] += exp_impl.eval(i);
-    return *this;
-}
-
-template<typename ImplType>
 TensorImpl& TensorImpl::__inplacement_add(const ImplType& exp_impl, std::false_type) {
     IndexArray inds(ndim());
     for(index_t i = 0; i < shape_.dsize(); ++i) {
         for(index_t ii = i, j = 0; j < ndim(); ++j) {
             if(stride_[j] != 0) {
-                inds[j] += ii / stride_[j];
+                inds[j] = ii / stride_[j];
                 ii %= stride_[j];
             }
         }
-        storage_[i] = exp_impl.eval(inds);
+        storage_[i] += exp_impl.eval(inds);
     }
     return *this;
 }
