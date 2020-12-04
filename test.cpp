@@ -206,12 +206,10 @@ void test_basic_operation() {
     Tensor t6 = t1.view({2, 1, 1, 2, 3});
     Tensor t7 = t1.view({2, 2, 1, 1, 3});
     Tensor t8 = t1.view({2, 2, 3});
-    auto exp1 = op::broadcast_add(t6, t7);
-    auto exp2 = op::broadcast_mul(t6, -t8);
-    auto exp3 = op::broadcast_sub(t6, t8);
-    auto exp4 = op::broadcast_add(exp1, exp2);
-    auto exp5 = op::broadcast_add(exp4, exp3);
-    Tensor t9 = exp5;
+    auto exp1 = t6 + t7;
+    auto exp2 = t6 * (-t8);
+    auto exp3 = t6 - t8;
+    Tensor t9 = exp1 + exp2 + exp3;
     for(index_t i = 0; i < 2; ++i)
         for(index_t j = 0; j < 2; ++j)
             for(index_t k = 0; k < 3; ++k)

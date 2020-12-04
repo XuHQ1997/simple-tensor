@@ -1,8 +1,6 @@
 #ifndef TENSOR_TENSOR_IMPL_H
 #define TENSOR_TENSOR_IMPL_H
 
-#include <type_traits>
-
 #include "exp/exp_impl.h"
 #include "tensor/storage.h"
 #include "tensor/shape.h"
@@ -13,8 +11,6 @@ namespace st {
 
 class TensorImpl : public ExpImpl<TensorImpl> {
 public:
-    // type traits for operator=.
-    using is_elementwise = std::false_type;
     // constructor
     TensorImpl(const Storage& storage, const Shape& shape, const IndexArray& stride,
            bool requires_grad=false);
@@ -62,13 +58,9 @@ public:
     friend std::ostream& operator<<(std::ostream& out, const TensorImpl& t);
 private:
     template<typename ImplType> 
-    TensorImpl& __assign(const ImplType& exp_impl, std::true_type);
+    TensorImpl& __assign(const ImplType& exp_impl);
     template<typename ImplType> 
-    TensorImpl& __assign(const ImplType& exp_impl, std::false_type);
-    template<typename ImplType> 
-    TensorImpl& __inplacement_add(const ImplType& exp_impl, std::true_type);
-    template<typename ImplType> 
-    TensorImpl& __inplacement_add(const ImplType& exp_impl, std::false_type);
+    TensorImpl& __inplacement_add(const ImplType& exp_impl);
 
     Storage storage_;
     Shape shape_;
@@ -82,21 +74,19 @@ private:
 template<typename ImplType> 
 TensorImpl& TensorImpl::operator=(const ImplType& exp_impl) {
     CHECK_TRUE(is_contiguous(), "operator= is only supported for contiguous Tensor.");
-    CHECK_EXP_SAME_SHAPE(*this, exp_impl);
-    using is_elementwise = typename ImplType::is_elementwise;
-    return __assign(exp_impl, is_elementwise());
+    CHECK_EXP_BROADCAST(*this, exp_impl);
+    return __assign(exp_impl);
 }
 
 template<typename ImplType>
 TensorImpl& TensorImpl::operator+=(const ImplType& exp_impl) {
     CHECK_TRUE(is_contiguous(), "operator+= is only supported for contiguous Tensor.");
-    CHECK_EXP_SAME_SHAPE(*this, exp_impl);
-    using is_elementwise = typename ImplType::is_elementwise;
-    return __inplacement_add(exp_impl, is_elementwise());
+    CHECK_EXP_BROADCAST(*this, exp_impl);
+    return __inplacement_add(exp_impl);
 }
 
 template<typename ImplType>
-TensorImpl& TensorImpl::__assign(const ImplType& exp_impl, std::false_type) {
+TensorImpl& TensorImpl::__assign(const ImplType& exp_impl) {
     IndexArray inds(ndim());
     for(index_t i = 0; i < shape_.dsize(); ++i) {
         for(index_t ii = i, j = 0; j < ndim(); ++j) {
@@ -111,7 +101,7 @@ TensorImpl& TensorImpl::__assign(const ImplType& exp_impl, std::false_type) {
 }
 
 template<typename ImplType>
-TensorImpl& TensorImpl::__inplacement_add(const ImplType& exp_impl, std::false_type) {
+TensorImpl& TensorImpl::__inplacement_add(const ImplType& exp_impl) {
     IndexArray inds(ndim());
     for(index_t i = 0; i < shape_.dsize(); ++i) {
         for(index_t ii = i, j = 0; j < ndim(); ++j) {

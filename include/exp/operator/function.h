@@ -2,7 +2,6 @@
 #define EXP_FUNCTION_H
 
 #include "exp/operator/basic_op.h"
-#include "exp/operator/broadcast_op.h"
 #include "exp/operator/matrix_op.h"
 #include "utils/allocator.h"
 #include "utils/exception.h"
@@ -50,7 +49,7 @@ operator-(const Exp<OIType>& operand) {
 template<typename LhsImplType, typename RhsImplType>
 Exp<BinaryExpImpl<Add, LhsImplType, RhsImplType>>
 add(const Exp<LhsImplType>& lhs, const Exp<RhsImplType>& rhs) {
-    CHECK_EXP_SAME_SHAPE(lhs.impl(), rhs.impl());
+    CHECK_EXP_BROADCAST(lhs.impl(), rhs.impl());
     return binary_operation_function<Add, LhsImplType, RhsImplType>(lhs, rhs);
 }
 template<typename LhsImplType, typename RhsImplType>
@@ -62,7 +61,7 @@ operator+(const Exp<LhsImplType>& lhs, const Exp<RhsImplType>& rhs) {
 template<typename LhsImplType, typename RhsImplType>
 Exp<BinaryExpImpl<Mul, LhsImplType, RhsImplType>>
 mul(const Exp<LhsImplType>& lhs, const Exp<RhsImplType>& rhs) {
-    CHECK_EXP_SAME_SHAPE(lhs.impl(), rhs.impl());
+    CHECK_EXP_BROADCAST(lhs.impl(), rhs.impl());
     return binary_operation_function<Mul, LhsImplType, RhsImplType>(lhs, rhs);
 }
 template<typename LhsImplType, typename RhsImplType>
@@ -74,7 +73,7 @@ operator*(const Exp<LhsImplType>& lhs, const Exp<RhsImplType>& rhs) {
 template<typename LhsImplType, typename RhsImplType>
 Exp<BinaryExpImpl<Sub, LhsImplType, RhsImplType>>
 sub(const Exp<LhsImplType>& lhs, const Exp<RhsImplType>& rhs) {
-    CHECK_EXP_SAME_SHAPE(lhs.impl(), rhs.impl());
+    CHECK_EXP_BROADCAST(lhs.impl(), rhs.impl());
     return binary_operation_function<Sub, LhsImplType, RhsImplType>(lhs, rhs);
 }
 template<typename LhsImplType, typename RhsImplType>
@@ -83,28 +82,8 @@ operator-(const Exp<LhsImplType>& lhs, const Exp<RhsImplType>& rhs) {
     return sub<LhsImplType, RhsImplType>(lhs, rhs);
 }
 
-// function for broadcasting operation
-template<typename LhsImplType, typename RhsImplType>
-Exp<BinaryExpImpl<BroadcastAdd, LhsImplType, RhsImplType>>
-broadcast_add(const Exp<LhsImplType>& lhs, const Exp<RhsImplType>& rhs) {
-    CHECK_EXP_BROADCAST(lhs.impl(), rhs.impl());
-    return binary_operation_function<BroadcastAdd, LhsImplType, RhsImplType>(lhs, rhs);
-}
 
-template<typename LhsImplType, typename RhsImplType>
-Exp<BinaryExpImpl<BroadcastMul, LhsImplType, RhsImplType>>
-broadcast_mul(const Exp<LhsImplType>& lhs, const Exp<RhsImplType>& rhs) {
-    CHECK_EXP_BROADCAST(lhs.impl(), rhs.impl());
-    return binary_operation_function<BroadcastMul, LhsImplType, RhsImplType>(lhs, rhs);
-}
-
-template<typename LhsImplType, typename RhsImplType>
-Exp<BinaryExpImpl<BroadcastSub, LhsImplType, RhsImplType>>
-broadcast_sub(const Exp<LhsImplType>& lhs, const Exp<RhsImplType>& rhs) {
-    CHECK_EXP_BROADCAST(lhs.impl(), rhs.impl());
-    return binary_operation_function<BroadcastSub, LhsImplType, RhsImplType>(lhs, rhs);
-}
-
+// function for matrix operation
 template<typename LhsImplType, typename RhsImplType>
 Exp<BinaryExpImpl<MatrixMul, LhsImplType, RhsImplType>>
 matrix_mul(const Exp<LhsImplType>& lhs, const Exp<RhsImplType>& rhs) {

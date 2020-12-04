@@ -1,7 +1,6 @@
 #ifndef EXP_OPERATOR_MATRIX_MUL_H
 #define EXP_OPERATOR_MATRIX_MUL_H
 
-#include <type_traits>
 #include <algorithm>
 
 #include "utils/base_config.h"
@@ -11,7 +10,6 @@ namespace st {
 namespace op {
 
 struct MatrixTranspose {
-    using is_elementwise = std::false_type;
     
     template<typename OperandType>
     static index_t ndim(const OperandType& operand) { return 2; }
@@ -29,7 +27,6 @@ struct MatrixTranspose {
 };
 
 struct MatrixMul {
-    using is_elementwise = std::false_type;
     
     template<typename LhsType, typename RhsType>
     static index_t ndim(const LhsType& lhs, const RhsType& rhs) { return 2; }
@@ -56,7 +53,6 @@ struct MatrixMul {
 };
 
 struct BatchMatrixTranspose {
-    using is_elementwise = std::false_type;
     
     template<typename OperandType>
     static index_t ndim(const OperandType& operand) { return 3; }
@@ -78,8 +74,6 @@ struct BatchMatrixTranspose {
 };
 
 struct BatchMatrixMul {
-    using is_elementwise = std::false_type;
-    
     template<typename LhsType, typename RhsType>
     static index_t ndim(const LhsType& lhs, const RhsType& rhs) { return 3; }
 

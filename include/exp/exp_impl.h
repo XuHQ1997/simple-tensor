@@ -2,11 +2,9 @@
 #define EXP_EXP_IMPL_H
 
 #include <memory>
-#include <utility>
 
 #include "utils/allocator.h"
 #include "utils/base_config.h"
-#include "utils/type_traits.h"
 #include "utils/array.h"
 #include "exp/operator/basic_op.h"
 
@@ -56,10 +54,6 @@ private:
 template<typename Op, typename OIType>  // OIType = OperandImplType
 class UnaryExpImpl : public ExpImpl<UnaryExpImpl<Op, OIType>> {
 public:
-    // UnaryExpImpl::is_elemenwise = Op::is_elementwise & OItype::is_elementwise
-    using is_elementwise = std::logic_and_t<typename Op::is_elementwise,
-                                            typename OIType::is_elementwise>;
-
     explicit UnaryExpImpl(const OperandImplPtr<OIType>& ptr)
             : operand_ptr_(ptr) {}
     
@@ -88,11 +82,6 @@ private:
 template<typename Op, typename LhsImplType, typename RhsImplType>
 class BinaryExpImpl : public ExpImpl<BinaryExpImpl<Op, LhsImplType, RhsImplType>> {
 public:
-    // is_elementwise = Lhs::is_elementwise && Rhs::is_elementwise
-    using is_elementwise = std::logic_and_t<typename Op::is_elementwise,
-                                            typename LhsImplType::is_elementwise,
-                                            typename RhsImplType::is_elementwise>;
-
     BinaryExpImpl(const OperandImplPtr<LhsImplType>& lhs_ptr,
                   const OperandImplPtr<RhsImplType>& rhs_ptr)
             : lhs_ptr_(lhs_ptr), 
