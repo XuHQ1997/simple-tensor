@@ -49,12 +49,12 @@ bool TensorImpl::is_contiguous(void) const {
     return true;
 }
 
-data_t& TensorImpl::operator[](std::initializer_list<index_t> ids) {
-    CHECK_EQUAL(ndim(), ids.size(),
-        "Invalid %dD indices for %dD tensor", ids.size(), ndim());
+data_t& TensorImpl::operator[](std::initializer_list<index_t> inds) {
+    CHECK_EQUAL(ndim(), inds.size(),
+        "Invalid %dD indices for %dD tensor", inds.size(), ndim());
 
     index_t offset = 0, i = 0;
-    for(auto idx: ids) {
+    for(auto idx: inds) {
         CHECK_IN_RANGE(idx, 0, size(i),
             "Index %d is out of bound for dimension %d with size %d", idx, i, size(i));
         offset += idx * stride_[i++];
@@ -62,12 +62,12 @@ data_t& TensorImpl::operator[](std::initializer_list<index_t> ids) {
     return storage_[offset]; 
 }
 
-data_t TensorImpl::operator[](std::initializer_list<index_t> ids) const {
-    CHECK_EQUAL(ndim(), ids.size(),
-        "Invalid %dD indices for %dD tensor", ids.size(), ndim());
+data_t TensorImpl::operator[](std::initializer_list<index_t> inds) const {
+    CHECK_EQUAL(ndim(), inds.size(),
+        "Invalid %dD indices for %dD tensor", inds.size(), ndim());
 
     index_t offset = 0, i = 0;
-    for(auto idx: ids) {
+    for(auto idx: inds) {
         CHECK_IN_RANGE(idx, 0, size(i),
             "Index %d is out of bound for dimension %d with size %d", idx, i, size(i));
         offset += idx * stride_[i++];
@@ -238,6 +238,18 @@ std::ostream& operator<<(std::ostream& out, const TensorImpl& src) {
 
     out.setf(flags);
     return out;
+}
+
+data_t TensorImpl::eval(IndexArray& inds) const {
+    index_t offset = 0;
+    for(int i = 0; i < ndim(); ++i) {
+        offset += inds[i] * stride_[i];
+    }
+    return storage_[offset];
+}
+
+data_t TensorImpl::eval(index_t idx) const {
+    return storage_[idx];
 }
 
 }  // namespace st

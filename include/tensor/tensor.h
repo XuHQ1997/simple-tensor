@@ -4,15 +4,18 @@
 #include <memory>
 
 #include "exp/exp.h"
+#include "exp/exp_impl.h"
 #include "tensor/tensor_impl.h"
+#include "exp/operator/function.h"
 
 namespace st {
 
 template class Exp<TensorImpl>;
 template class ExpImplPtr<TensorImpl>;
 
+
 // Shell of TensorImpl. See exp/exp.h for more information.
-class Tensor : private Exp<TensorImpl> {
+class Tensor : public Exp<TensorImpl> {
 public:
     Tensor(const Storage& storage, const Shape& shape, const IndexArray& stride,
            bool requires_grad=false);
@@ -47,9 +50,22 @@ public:
     Tensor squeeze(void) const;
     Tensor unsqueeze(index_t dim) const;
 
+    template<typename ImplType> Tensor& operator=(const Exp<ImplType>& exp);
+    template<typename ImplType> Tensor& operator+=(const Exp<ImplType>& exp);
+
     // friend function
     friend std::ostream& operator<<(std::ostream& out, const Tensor& t);
 };
+
+template<typename ImplType> Tensor& Tensor::operator=(const Exp<ImplType>& exp) {
+    impl_ptr_->operator=(*exp.impl_ptr());
+    return *this;
+}
+
+template<typename ImplType> Tensor& Tensor::operator+=(const Exp<ImplType>& exp) {
+    impl_ptr_->operator+=(*exp.impl_ptr());
+    return *this;
+}
 
 }  // namespace st
 #endif

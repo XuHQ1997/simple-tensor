@@ -3,6 +3,7 @@
 */
 
 #include <iostream>
+#include <chrono>
 
 #include "tensor/shape.h"
 #include "tensor/storage.h"
@@ -10,8 +11,11 @@
 #include "tensor/tensor.h"
 #include "utils/base_config.h"
 #include "utils/array.h"
-#include "tensor/shape.h"
-#include "utils/exception.h"  // CHECK_XXX is defined here.
+// CHECK_XXX is defined in utils/exception.h
+// Only work in namespace st.
+#include "utils/exception.h"
+#include "exp/operator/function.h"
+
 
 using std::cout;
 using std::endl;
@@ -69,7 +73,6 @@ void test_Tensor() {
     data_t data[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
     index_t idata[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
 
-    cout << "check 1" << endl;
     st::Tensor t1(data, Shape({3, 4}));
     cout << t1 << endl;
     for(index_t i = 0, idx = -1; i < 3; ++i) {
@@ -81,7 +84,6 @@ void test_Tensor() {
         }
     }
     
-    cout << "check 2" << endl;
     auto t2 = t1.transpose(0, 1);
     cout << t2 << endl;
     for(index_t i = 0; i < 4; ++i) {
@@ -92,12 +94,9 @@ void test_Tensor() {
         }
     }
 
-    cout << "check 3" << endl;
     auto t3 = t2.slice(/*start=*/1, /*end=*/3, /*dim=*/1);
     auto shape_t3 = t3.size();
-    cout << shape_t3 << endl;
     CHECK_TRUE(shape_t3[0] == 4 && shape_t3[1] == 2, "check 3");
-    cout << t3 << endl;
     for(index_t i = 0; i < 4; ++i) {
         for(index_t j = 0; j < 2; ++j) {
             int value1 = t2[{i, j+1}];
@@ -106,11 +105,8 @@ void test_Tensor() {
         }
     }
 
-    cout << "check 4" << endl;
     auto t4 = t1.view({3, 2, 2});
     auto shape_t4 = t4.size();
-    cout << shape_t4 << endl;
-    cout << t4 << endl;
     for(index_t i = 0; i < 3; ++i) {
         for(index_t j = 0; j < 2; ++j) {
             for(index_t k = 0; k < 2; ++k) {
@@ -121,10 +117,8 @@ void test_Tensor() {
         }
     }
 
-    cout << "check 5" << endl;
     auto t5 = t4.unsqueeze(/*dim=*/0).unsqueeze(/*dim=*/2);
     CHECK_EQUAL(t5.ndim(), 5, "check 5");
-    cout << t5 << endl;
     Shape shape_t5({1, 3, 1, 2, 2});
     for(index_t i = 0; i < 5; ++i)
         CHECK_EQUAL(t5.size(i), shape_t5[i], "check 5");
@@ -138,9 +132,7 @@ void test_Tensor() {
         }
     }
 
-    cout << "check 6" << endl;
     auto t6 = t5.squeeze();
-    cout << t6 << endl;
     CHECK_EQUAL(t6.ndim(), t4.ndim(), "check 6");
     for(index_t i = 0; i < 3; ++i) {
         for(index_t j = 0; j < 2; ++j) {
@@ -153,16 +145,87 @@ void test_Tensor() {
     }
 }
 
+void test_operation() {
+    using namespace st;
+
+    data_t data[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
+    Tensor t1(data, Shape{3, 4});
+    Tensor t2(data, Shape{3, 4});
+
+    Tensor t3(Shape{3, 4});
+    t3 = t1 + t2;
+    for(index_t i = 0; i < 3; ++i) {
+        for(index_t j = 0; j < 4; ++j) {
+            data_t value1 = t3[{i, j}];
+            data_t value2 = 2*t1[{i, j}];
+            CHECK_EQUAL(value1, value2, "check 1");
+        }
+    }
+
+    t3 += t1;
+    for(index_t i = 0; i < 3; ++i) {
+        for(index_t j = 0; j < 4; ++j) {
+            data_t value1 = t3[{i, j}];
+            data_t value2 = 3*t1[{i, j}];
+            CHECK_EQUAL(value1, value2, "check 2");
+        }
+    }
+
+    Tensor t4(Shape{3, 4});
+    t4 = t1 * t2 + t3;
+    for(index_t i = 0; i < 3; ++i) {
+        for(index_t j = 0; j < 4; ++j) {
+            data_t value1 = t4[{i, j}];
+            data_t value2 = t1[{i, j}] * t2[{i, j}] + t3[{i, j}];
+            CHECK_EQUAL(value1, value2, "check 3");
+        }
+    }
+
+    Tensor t5(Shape{3, 4});
+    auto func = [&t1, &t2](const Tensor& t3, const Tensor& t4) {
+        auto add_exp = t1 + t2;
+        auto mul_exp = t1 * t2;
+        return t3 * t4 + add_exp + mul_exp;
+    };
+    auto exp = func(t3, t4);
+    // At this time, add_exp, mul_exp and other implicitly constructed Exp has 
+    // been deconstructed. But we expect the BinaryExpImpl hold by them is 
+    // still alive, untill the assignment of t5 completes.
+    t5 = exp;
+    for(index_t i = 0; i < 3; ++i) {
+        for(index_t j = 0; j < 4; ++j) {
+            data_t value1 = t5[{i, j}];
+            data_t value2 = t3[{i, j}] * t4[{i, j}]
+                        + t1[{i, j}] + t2[{i, j}]
+                        + t1[{i, j}] * t2[{i, j}];
+            CHECK_EQUAL(value1, value2, "check 3");
+        }
+    }
+}
+
 int main() {
     using namespace st;
-    cout << "test allocator." << endl;
+    using namespace std::chrono;
+
+    #define BLUE_STRING(s) 
+
+    steady_clock::time_point start_tp = steady_clock::now();
+
+    cout << "\033[33mtest allocator...\33[0m" << endl;
     test_Alloc();
 
-    cout << "test tensor" << endl;
+    cout << "\033[33mtest tensor...\33[0m" << endl;
     test_Tensor();
 
+    cout << "\033[33mtest operation...\033[0m" << endl;
+    test_operation();
+
     CHECK_TRUE(Alloc::all_clear(), "check memory all clear");
-    cout << "test success" << endl;
+
+    steady_clock::time_point end_tp = steady_clock::now();
+    duration<double> time_span = duration_cast<duration<double>>(end_tp - start_tp);
+    cout << "\033[32mTest success. Test took " << time_span.count();
+    cout << " seconds.\033[0m" << endl;
     return 0;
 }
 

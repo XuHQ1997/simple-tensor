@@ -39,6 +39,7 @@ public:
     Dtype& operator[](index_t idx) { return dptr_.get()[idx]; }
     Dtype operator[](index_t idx) const { return dptr_.get()[idx]; }
     index_t size() const { return size_; }
+    void memset(int value) const { std::memset(dptr_.get(), value, size_ * sizeof(Dtype)); }
 private:
     index_t size_;
     Alloc::TrivialUniquePtr<Dtype> dptr_;

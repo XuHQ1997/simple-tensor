@@ -1,14 +1,20 @@
 #ifndef TENSOR_TENSOR_IMPL_H
 #define TENSOR_TENSOR_IMPL_H
 
-#include "exp/exp.h"
+#include <type_traits>
+
+#include "exp/exp_impl.h"
 #include "tensor/storage.h"
 #include "tensor/shape.h"
+#include "utils/exception.h"
+
 
 namespace st {
 
 class TensorImpl : public ExpImpl<TensorImpl> {
 public:
+    // type traits for operator=.
+    using is_elementwise = std::true_type;
     // constructor
     TensorImpl(const Storage& storage, const Shape& shape, const IndexArray& stride,
            bool requires_grad=false);
@@ -46,15 +52,90 @@ public:
     Alloc::NontrivialUniquePtr<TensorImpl> squeeze(void) const;
     Alloc::NontrivialUniquePtr<TensorImpl> unsqueeze(index_t dim) const;
 
+    // member function for expression template
+    data_t eval(IndexArray& inds) const;
+    data_t eval(index_t idx) const;
+    template<typename ImplType> TensorImpl& operator=(const ImplType& exp_impl);
+    template<typename ImplType> TensorImpl& operator+=(const ImplType& exp_impl);
+
     // friend function
     friend std::ostream& operator<<(std::ostream& out, const TensorImpl& t);
 private:
+    template<typename ImplType> 
+    TensorImpl& __assign(const ImplType& exp_impl, std::true_type);
+    template<typename ImplType> 
+    TensorImpl& __assign(const ImplType& exp_impl, std::false_type);
+    template<typename ImplType> 
+    TensorImpl& __inplacement_add(const ImplType& exp_impl, std::true_type);
+    template<typename ImplType> 
+    TensorImpl& __inplacement_add(const ImplType& exp_impl, std::false_type);
+
     Storage storage_;
     Shape shape_;
     IndexArray stride_;
 
     bool requires_grad_;
 };
+
+
+// member template function definition
+template<typename ImplType> 
+TensorImpl& TensorImpl::operator=(const ImplType& exp_impl) {
+    CHECK_TRUE(is_contiguous(), "operator= is only supported for contiguous Tensor.");
+    using is_elementwise = typename ImplType::is_elementwise;
+    return __assign(exp_impl, is_elementwise());
+}
+
+template<typename ImplType>
+TensorImpl& TensorImpl::operator+=(const ImplType& exp_impl) {
+    CHECK_TRUE(is_contiguous(), "operator+= is only supported for contiguous Tensor.");
+    using is_elementwise = typename ImplType::is_elementwise;
+    return __inplacement_add(exp_impl, is_elementwise());
+}
+
+template<typename ImplType>
+TensorImpl& TensorImpl::__assign(const ImplType& exp_impl, std::true_type) {
+    for(int i = 0; i < shape_.dsize(); ++i)
+        storage_[i] = exp_impl.eval(i);
+    return *this;
+}
+
+template<typename ImplType>
+TensorImpl& TensorImpl::__assign(const ImplType& exp_impl, std::false_type) {
+    IndexArray inds(ndim());
+    for(index_t i = 0; i < shape_.dsize(); ++i) {
+        for(index_t ii = i, j = 0; j < ndim(); ++j) {
+            if(stride_[j] != 0) {
+                inds[j] = ii / stride_[j];
+                ii %= stride_[j];
+            }
+        }
+        storage_[i] = exp_impl.eval(inds);
+    }
+    return *this;
+}
+
+template<typename ImplType>
+TensorImpl& TensorImpl::__inplacement_add(const ImplType& exp_impl, std::true_type) {
+    for(int i = 0; i < shape_.dsize(); ++i)
+        storage_[i] += exp_impl.eval(i);
+    return *this;
+}
+
+template<typename ImplType>
+TensorImpl& TensorImpl::__inplacement_add(const ImplType& exp_impl, std::false_type) {
+    IndexArray inds(ndim());
+    for(index_t i = 0; i < shape_.dsize(); ++i) {
+        for(index_t ii = i, j = 0; j < ndim(); ++j) {
+            if(stride_[j] != 0) {
+                inds[j] += ii / stride_[j];
+                ii %= stride_[j];
+            }
+        }
+        storage_[i] = exp_impl.eval(inds);
+    }
+    return *this;
+}
 
 }  // namespace st
 

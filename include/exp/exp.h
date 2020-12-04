@@ -1,18 +1,10 @@
 #ifndef EXP_EXP_H
 #define EXP_EXP_H
 
-#include <memory>
-#include <utility>
-
-#include "utils/allocator.h"
-#include "utils/base_config.h"
+#include "exp/exp_impl.h"
+#include "exp/operator/function.h"
 
 namespace st {
-
-// forward declaration
-template<typename T> class ExpImplPtr;
-template<typename T> class ExpImpl;
-
 /*
 struct Exp is a bit like the shell of class ExpImpl.
 The meaning of this shell is to keep ExpImpl alive in heap memory instead of stack 
@@ -31,50 +23,20 @@ We implement Expression Template, so we expect lazy computation. In this case, w
 expect the computation is done in Tensor::operator=(const Exp&). But at this time,
 mul_exp has been deconstructed since compute(a, b) returned. So Exp need a shell.
 */
-template<typename Subtype> 
+template<typename ImplType> 
 struct Exp {
-    ExpImplPtr<Subtype> impl_ptr_;
-    Exp(Alloc::NontrivialUniquePtr<Subtype>&& ptr)
+public:
+    explicit Exp(Alloc::NontrivialUniquePtr<ImplType>&& ptr)
             :impl_ptr_(std::move(ptr)) {}
+    const ExpImplPtr<ImplType>& impl_ptr(void) const { return impl_ptr_; }
+protected:
+    ExpImplPtr<ImplType> impl_ptr_;
 };
 
-template<typename Subtype> 
-class ExpImpl {
-public:
-    const Subtype& self() const {
-        return *static_cast<const Subtype*>(this);
-    }
+using op::operator+;
+using op::operator*;
+using op::operator-;
 
-    friend class ExpImplPtr<Subtype>;
-private:
-    index_t refcount_ = 0;
-    index_t gradcount_ = 0;
-};
-
-template<typename Subtype> 
-class ExpImplPtr {
-public:
-    using Impl = ExpImpl<Subtype>;
-
-    ExpImplPtr(Alloc::NontrivialUniquePtr<Subtype>&& ptr)
-            : ptr_(ptr.release()) { increment_refcount(); }
-    ~ExpImplPtr() { decrease_refcount(); }
-
-    Subtype* operator->(void) const { return static_cast<Subtype*>(ptr_); }
-    const Subtype& operator*(void) const { return ptr_->self(); }
-private:
-    void increment_refcount() { ++ptr_->refcount_; }
-
-    void decrease_refcount() {
-        --ptr_->refcount_;
-        if(ptr_->refcount_ == 0)
-            delete_handler(static_cast<void*>(ptr_));
-    }
-
-    Impl* ptr_;
-    Alloc::nontrivial_delete_handler<Subtype> delete_handler;
-};
-
-} // namespace st end
+}  // namespace st
 
 #endif
