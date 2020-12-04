@@ -43,8 +43,8 @@ $(BIN)/tensor.o: src\tensor\tensor.cpp include/tensor/tensor.h include/exp/exp.h
  include/exp/exp_impl.h include/utils/allocator.h \
  include/utils/base_config.h include/utils/type_traits.h \
  include/exp/operator/basic_op.h include/exp/operator/function.h \
- include/tensor/tensor_impl.h include/tensor/storage.h \
- include/tensor/shape.h include/utils/array.h include/utils/exception.h
+ include/utils/exception.h include/tensor/tensor_impl.h \
+ include/tensor/storage.h include/tensor/shape.h include/utils/array.h
 	$(CXX) $(CXX_FLAGS) -I $(INCLUDE) -c -o $(BIN)/tensor.o src\tensor\tensor.cpp
 
 $(BIN)/tensor_impl.o: src\tensor\tensor_impl.cpp include/tensor/tensor_impl.h \

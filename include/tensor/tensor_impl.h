@@ -82,6 +82,7 @@ private:
 template<typename ImplType> 
 TensorImpl& TensorImpl::operator=(const ImplType& exp_impl) {
     CHECK_TRUE(is_contiguous(), "operator= is only supported for contiguous Tensor.");
+    CHECK_EXP_SAME_SHAPE(*this, exp_impl);
     using is_elementwise = typename ImplType::is_elementwise;
     return __assign(exp_impl, is_elementwise());
 }
@@ -89,6 +90,7 @@ TensorImpl& TensorImpl::operator=(const ImplType& exp_impl) {
 template<typename ImplType>
 TensorImpl& TensorImpl::operator+=(const ImplType& exp_impl) {
     CHECK_TRUE(is_contiguous(), "operator+= is only supported for contiguous Tensor.");
+    CHECK_EXP_SAME_SHAPE(*this, exp_impl);
     using is_elementwise = typename ImplType::is_elementwise;
     return __inplacement_add(exp_impl, is_elementwise());
 }

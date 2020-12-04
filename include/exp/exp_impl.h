@@ -61,6 +61,14 @@ public:
 
     explicit UnaryExpImpl(const OperandImplPtr<OIType>& ptr)
             : operand_ptr_(ptr) {}
+    
+    index_t ndim(void) const {
+        return Op::ndim(*operand_ptr_);
+    }
+
+    index_t size(index_t idx) const {
+        return Op::size(idx, *operand_ptr_);
+    }
 
     data_t eval(IndexArray& inds) const {
         return Op::map(inds, *operand_ptr_);
@@ -86,6 +94,14 @@ public:
                   const OperandImplPtr<RhsImplType>& rhs_ptr)
             : lhs_ptr_(lhs_ptr), 
               rhs_ptr_(rhs_ptr) {}
+
+    index_t ndim(void) const {
+        return Op::ndim(*lhs_ptr_, *rhs_ptr_);
+    }
+
+    index_t size(index_t idx) const {
+        return Op::size(idx, *lhs_ptr_, *rhs_ptr_);
+    }
 
     data_t eval(IndexArray& inds) const {
         return Op::map(inds, *lhs_ptr_, *rhs_ptr_);

@@ -184,8 +184,8 @@ void test_operation() {
     Tensor t5(Shape{3, 4});
     auto func = [&t1, &t2](const Tensor& t3, const Tensor& t4) {
         auto add_exp = t1 + t2;
-        auto mul_exp = t1 * t2;
-        return t3 * t4 + add_exp + mul_exp;
+        auto mul_exp = -t1 * t2;
+        return t3 * t4 - add_exp - mul_exp;
     };
     auto exp = func(t3, t4);
     // At this time, add_exp, mul_exp and other implicitly constructed Exp has 
@@ -196,11 +196,25 @@ void test_operation() {
         for(index_t j = 0; j < 4; ++j) {
             data_t value1 = t5[{i, j}];
             data_t value2 = t3[{i, j}] * t4[{i, j}]
-                        + t1[{i, j}] + t2[{i, j}]
-                        + t1[{i, j}] * t2[{i, j}];
+                        - (t1[{i, j}] + t2[{i, j}])
+                        - (-t1[{i, j}] * t2[{i, j}]);
             CHECK_EQUAL(value1, value2, "check 3");
         }
     }
+
+    // Tensor t6 = t1.view({2, 1, 1, 2, 3});
+    // Tensor t7 = t1.view({2, 2, 1, 1, 3});
+    // Tensor t8(Shape{2, 2, 1, 2, 3});
+    // t8 = op::broadcast_add(t6, t7);
+    // for(index_t i = 0; i < 2; ++i)
+    //     for(index_t j = 0; j < 2; ++j)
+    //         for(index_t k = 0; k < 2; ++k)
+    //             for(index_t l = 0; l < 3; ++l) {
+    //                 data_t value1 = t8[{i, j, 0, k, l}];
+    //                 data_t value2 = t6[{i, 0, 0, k, l}]
+    //                               + t7[{i, j, 0, 0, l}];
+    //                 CHECK_EQUAL(value1, value2, "check 3");
+    //             }
 }
 
 int main() {

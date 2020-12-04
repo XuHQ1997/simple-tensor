@@ -3,6 +3,7 @@
 
 #include "exp/operator/basic_op.h"
 #include "exp/exp_impl.h"
+#include "utils/exception.h"
 
 namespace st {
 
@@ -33,7 +34,7 @@ binary_operation_function(const Exp<LhsImplType>& lhs, const Exp<RhsImplType>& r
 }  // namespace
 
 template<typename OIType>
-Exp<UnaryExpImpl<Minus, OIType>> 
+Exp<UnaryExpImpl<Minus, OIType>>
 minus(const Exp<OIType>& operand) {
     return unary_operation_function<Minus, OIType>(operand);
 }
@@ -46,6 +47,7 @@ operator-(const Exp<OIType>& operand) {
 template<typename LhsImplType, typename RhsImplType>
 Exp<BinaryExpImpl<Add, LhsImplType, RhsImplType>>
 add(const Exp<LhsImplType>& lhs, const Exp<RhsImplType>& rhs) {
+    CHECK_EXP_SAME_SHAPE(lhs.impl(), rhs.impl());
     return binary_operation_function<Add, LhsImplType, RhsImplType>(lhs, rhs);
 }
 template<typename LhsImplType, typename RhsImplType>
@@ -57,6 +59,7 @@ operator+(const Exp<LhsImplType>& lhs, const Exp<RhsImplType>& rhs) {
 template<typename LhsImplType, typename RhsImplType>
 Exp<BinaryExpImpl<Mul, LhsImplType, RhsImplType>>
 mul(const Exp<LhsImplType>& lhs, const Exp<RhsImplType>& rhs) {
+    CHECK_EXP_SAME_SHAPE(lhs.impl(), rhs.impl());
     return binary_operation_function<Mul, LhsImplType, RhsImplType>(lhs, rhs);
 }
 template<typename LhsImplType, typename RhsImplType>
@@ -68,6 +71,7 @@ operator*(const Exp<LhsImplType>& lhs, const Exp<RhsImplType>& rhs) {
 template<typename LhsImplType, typename RhsImplType>
 Exp<BinaryExpImpl<Sub, LhsImplType, RhsImplType>>
 sub(const Exp<LhsImplType>& lhs, const Exp<RhsImplType>& rhs) {
+    CHECK_EXP_SAME_SHAPE(lhs.impl(), rhs.impl());
     return binary_operation_function<Sub, LhsImplType, RhsImplType>(lhs, rhs);
 }
 template<typename LhsImplType, typename RhsImplType>
