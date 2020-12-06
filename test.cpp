@@ -80,11 +80,8 @@ void test_Tensor() {
     // cout << t1 << endl;
     for(index_t i = 0, idx = -1; i < 3; ++i) {
         for(index_t j = 0; j < 4; ++j) {
-            // In fact, TensorImpl::operator[](initilize_list<index_t>) will return 
-            // a result of type data_t, but as we know, we can't check whether two 
-            // double vars are equal.
-            int value = t1[{i, j}];
-            CHECK_EQUAL(value, data[++idx], "check 1");
+            data_t value = t1[{i, j}];
+            CHECK_FLOAT_EQUAL(value, data[++idx], "check 1");
         }
     }
     
@@ -92,9 +89,9 @@ void test_Tensor() {
     // cout << t2 << endl;
     for(index_t i = 0; i < 4; ++i) {
         for(index_t j = 0; j < 3; ++j) {
-            int value1 = t1[{j, i}];
-            int value2 = t2[{i, j}];
-            CHECK_EQUAL(value1, value2, "check 2");
+            data_t value1 = t1[{j, i}];
+            data_t value2 = t2[{i, j}];
+            CHECK_FLOAT_EQUAL(value1, value2, "check 2");
         }
     }
 
@@ -103,9 +100,9 @@ void test_Tensor() {
     CHECK_TRUE(shape_t3[0] == 4 && shape_t3[1] == 2, "check 3");
     for(index_t i = 0; i < 4; ++i) {
         for(index_t j = 0; j < 2; ++j) {
-            int value1 = t2[{i, j+1}];
-            int value2 = t3[{i, j}];
-            CHECK_EQUAL(value1, value2, "check 3");
+            data_t value1 = t2[{i, j+1}];
+            data_t value2 = t3[{i, j}];
+            CHECK_FLOAT_EQUAL(value1, value2, "check 3");
         }
     }
 
@@ -114,9 +111,9 @@ void test_Tensor() {
     for(index_t i = 0; i < 3; ++i) {
         for(index_t j = 0; j < 2; ++j) {
             for(index_t k = 0; k < 2; ++k) {
-                int value1 = t1[{i, j*2+k}];
-                int value2 = t4[{i, j, k}];
-                CHECK_EQUAL(value1, value2, "check 4");
+                data_t value1 = t1[{i, j*2+k}];
+                data_t value2 = t4[{i, j, k}];
+                CHECK_FLOAT_EQUAL(value1, value2, "check 4");
             }
         }
     }
@@ -129,9 +126,9 @@ void test_Tensor() {
     for(index_t i = 0; i < 3; ++i) {
         for(index_t j = 0; j < 2; ++j) {
             for(index_t k = 0; k < 2; ++k) {
-                int value1 = t4[{i, j, k}];
-                int value2 = t5[{0, i, 0, j, k}];
-                CHECK_EQUAL(value1, value2, "check 5");
+                data_t value1 = t4[{i, j, k}];
+                data_t value2 = t5[{0, i, 0, j, k}];
+                CHECK_FLOAT_EQUAL(value1, value2, "check 5");
             }
         }
     }
@@ -141,9 +138,9 @@ void test_Tensor() {
     for(index_t i = 0; i < 3; ++i) {
         for(index_t j = 0; j < 2; ++j) {
             for(index_t k = 0; k < 2; ++k) {
-                int value1 = t4[{i, j, k}];
-                int value2 = t6[{i, j, k}];
-                CHECK_EQUAL(value1, value2, "check 6");
+                data_t value1 = t4[{i, j, k}];
+                data_t value2 = t6[{i, j, k}];
+                CHECK_FLOAT_EQUAL(value1, value2, "check 6");
             }
         }
     }
@@ -159,27 +156,27 @@ void test_basic_operation() {
     Tensor t3 = t1 + t2;
     for(index_t i = 0; i < 3; ++i) {
         for(index_t j = 0; j < 4; ++j) {
-            int value1 = t3[{i, j}];
-            int value2 = 2*t1[{i, j}];
-            CHECK_EQUAL(value1, value2, "check 1");
+            data_t value1 = t3[{i, j}];
+            data_t value2 = 2*t1[{i, j}];
+            CHECK_FLOAT_EQUAL(value1, value2, "check 1");
         }
     }
 
     t3 += t1;
     for(index_t i = 0; i < 3; ++i) {
         for(index_t j = 0; j < 4; ++j) {
-            int value1 = t3[{i, j}];
-            int value2 = 3*t1[{i, j}];
-            CHECK_EQUAL(value1, value2, "check 2");
+            data_t value1 = t3[{i, j}];
+            data_t value2 = 3*t1[{i, j}];
+            CHECK_FLOAT_EQUAL(value1, value2, "check 2");
         }
     }
 
     Tensor t4 = t1 * t2 + t3;
     for(index_t i = 0; i < 3; ++i) {
         for(index_t j = 0; j < 4; ++j) {
-            int value1 = t4[{i, j}];
-            int value2 = t1[{i, j}] * t2[{i, j}] + t3[{i, j}];
-            CHECK_EQUAL(value1, value2, "check 3");
+            data_t value1 = t4[{i, j}];
+            data_t value2 = t1[{i, j}] * t2[{i, j}] + t3[{i, j}];
+            CHECK_FLOAT_EQUAL(value1, value2, "check 3");
         }
     }
 
@@ -195,11 +192,11 @@ void test_basic_operation() {
     Tensor t5 = exp;
     for(index_t i = 0; i < 3; ++i) {
         for(index_t j = 0; j < 4; ++j) {
-            int value1 = t5[{i, j}];
-            int value2 = t3[{i, j}] * t4[{i, j}]
+            data_t value1 = t5[{i, j}];
+            data_t value2 = t3[{i, j}] * t4[{i, j}]
                         - (t1[{i, j}] + t2[{i, j}])
                         - (-t1[{i, j}] * t2[{i, j}]);
-            CHECK_EQUAL(value1, value2, "check 3");
+            CHECK_FLOAT_EQUAL(value1, value2, "check 3");
         }
     }
 
@@ -215,11 +212,11 @@ void test_basic_operation() {
             for(index_t k = 0; k < 3; ++k)
                 for(index_t l = 0; l < 2; ++l) 
                     for(index_t m = 0; m < 3; ++m) {
-                        int value1 = t9[{i, j, k, l, m}];
-                        int value2 = t6[{i, 0, 0, l, m}] + t7[{i, j, 0, 0, m}];
+                        data_t value1 = t9[{i, j, k, l, m}];
+                        data_t value2 = t6[{i, 0, 0, l, m}] + t7[{i, j, 0, 0, m}];
                         value2    -= t6[{i, 0, 0, l, m}] * t8[{i, j, k}];
                         value2    += t6[{i, 0, 0, l, m}] - t8[{i, j, k}];
-                        CHECK_EQUAL(value1, value2, "check 3");
+                        CHECK_FLOAT_EQUAL(value1, value2, "check 3");
                     }
 }
 
@@ -235,9 +232,9 @@ void test_matrix_operation() {
     data_t t3_expect[2][2] = {{931, 2191}, {2227, 5647}};
     for(index_t i = 0; i < 2; ++i) {
         for(index_t j = 0; j < 2; ++j) {
-            int value1 = t3[{i, j}];
-            int value2 = t3_expect[i][j];
-            CHECK_EQUAL(value1, value2, "check 1");
+            data_t value1 = t3[{i, j}];
+            data_t value2 = t3_expect[i][j];
+            CHECK_FLOAT_EQUAL(value1, value2, "check 1");
         }
     }
 
@@ -250,9 +247,9 @@ void test_matrix_operation() {
     for(index_t i = 0; i < 3; ++i) {
         for(index_t j = 0; j < 2; ++j) {
             for(index_t k = 0; k < 2; ++k) {
-                int value1 = t6[{i, j, k}];
-                int value2 = t6_expect[i][j][k];
-                CHECK_EQUAL(value1, value2, "check 2");
+                data_t value1 = t6[{i, j, k}];
+                data_t value2 = t6_expect[i][j][k];
+                CHECK_FLOAT_EQUAL(value1, value2, "check 2");
             }
         }
     }
