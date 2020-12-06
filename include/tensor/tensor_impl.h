@@ -22,8 +22,10 @@ public:
                     bool requires_grad=false);
     TensorImpl(Storage&& storage, Shape&& shape, IndexArray&& stride, 
            bool requires_grad=false);
+    
     TensorImpl(const TensorImpl& other) = default;
     TensorImpl(TensorImpl&& other) = default;
+    TensorImpl& operator=(const TensorImpl& other);
 
     // inline function
     index_t ndim(void) const { return shape_.ndim(); }

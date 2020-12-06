@@ -34,6 +34,11 @@ Tensor::Tensor(Alloc::NontrivialUniquePtr<TensorImpl>&& ptr)
         : Exp<TensorImpl>(std::move(ptr))
     {}
 
+Tensor& Tensor::operator=(const Tensor& other) {
+    impl_ptr_->operator=(other.impl());
+    return *this;
+}
+
 index_t Tensor::ndim(void) const { return impl_ptr_->ndim(); }
 index_t Tensor::size(index_t idx) const { return impl_ptr_->size(idx); }
 const Shape& Tensor::size(void) const { return impl_ptr_->size(); }

@@ -32,6 +32,7 @@ public:
     
     Tensor(const Tensor& other) = default;
     Tensor(Tensor&& other) = default;
+    Tensor& operator=(const Tensor& other);
 
     index_t ndim(void) const;
     index_t size(index_t idx) const;

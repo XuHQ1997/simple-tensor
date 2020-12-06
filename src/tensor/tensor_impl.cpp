@@ -42,6 +42,10 @@ TensorImpl::TensorImpl(Storage&& storage,
           stride_(std::move(stride)),
           requires_grad_(requires_grad) {}
 
+TensorImpl& TensorImpl::operator=(const TensorImpl& other) {
+    return __assign(other);
+}
+
 bool TensorImpl::is_contiguous(void) const {
     for(index_t i = 0; i < stride_.size(); i++)
         if(stride_[i] != 0 && stride_[i] != shape_.subsize(i+1))

@@ -218,6 +218,17 @@ void test_basic_operation() {
                         value2    += t6[{i, 0, 0, l, m}] - t8[{i, j, k}];
                         CHECK_FLOAT_EQUAL(value1, value2, "check 3");
                     }
+    
+    Tensor t10(Shape{2, 2, 3, 3});
+    t10 = t8;
+    for(index_t i = 0; i < 2; ++i)
+        for(index_t j = 0; j < 2; ++j)
+            for(index_t k = 0; k < 3; ++k)
+                for(index_t l = 0; l < 3; ++l) {
+                    data_t value1 = t10[{i, j, k, l}];
+                    data_t value2 = t8[{i, j, k}];
+                    CHECK_FLOAT_EQUAL(value1, value2, "check 4");
+                }
 }
 
 void test_matrix_operation() {
