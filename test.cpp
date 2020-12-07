@@ -269,18 +269,42 @@ void test_matrix_operation() {
 
 void test_numeric_operation() {
     using namespace st;
-    data_t data[] = {0.9742, 0.8367, 0.6840, 1.0074, 1.2784, 1.2193, 
+    data_t data1[] = {0.9742, 0.8367, 0.6840, 1.0074, 1.2784, 1.2193, 
                      1.0252, 1.1873, 1.4498, 1.2189, 0.7510, 1.3621};
-    Tensor t0(data, Shape{3, 4});
-    data_t log_softmax_expect[3][4] = {{-1.295666, -1.433150, -1.585845, -1.262473},
+    Tensor t0(data1, Shape{3, 4});
+    data_t t1_expect[3][4] = {{-1.295666, -1.433150, -1.585845, -1.262473},
                                        {-1.289772, -1.348877, -1.542909, -1.380803},
                                        {-1.165368, -1.396256, -1.864143, -1.253019}};
     Tensor t1 = op::log_softmax(t0);
     for(index_t i = 0; i < 3; ++i)
         for(index_t j = 0; j < 4; ++j) {
             data_t value1 = t1[{i, j}];
-            data_t value2 = log_softmax_expect[i][j];
+            data_t value2 = t1_expect[i][j];
             CHECK_FLOAT_EQUAL(value1, value2, "check1");
+        }
+
+    auto labels_ptr = Alloc::shared_allocate<index_t>(3 * sizeof(index_t));
+    auto labels = labels_ptr.get();
+    labels[0] = 2, labels[1] = 0, labels[2] = 3;
+    Tensor t2 = op::nll_loss(t1, labels_ptr);
+    CHECK_EQUAL(t2.ndim(), 1, "check2");
+    CHECK_EQUAL(t2.size(0), t1.size(0), "check2");
+    CHECK_FLOAT_EQUAL(t2[{0}], 1.585845, "check2");
+    CHECK_FLOAT_EQUAL(t2[{1}], 1.289772, "check2");
+    CHECK_FLOAT_EQUAL(t2[{2}], 1.253019, "check2");
+
+    data_t data2[] = {0.096237, -0.037000,  0.028076,  0.328307,  0.122271, -0.017293,
+                      0.150791,  0.421008,  0.322066, -0.321352,  0.319534, -0.424081};
+    Tensor t3(data2, Shape{2, 2, 3});
+    Tensor t4 = op::mean(op::sigmoid(op::relu(t3)), 1);
+    data_t t4_expect[][3] = {{0.552694, 0.515265, 0.503509},
+                             {0.518813, 0.591467, 0.539914}};
+    CHECK_TRUE(t4.ndim() == 2 && t4.size(0) == 2 && t4.size(1) == 3, "check3");
+    for(index_t i = 0; i < 2; ++i)
+        for(index_t j = 0; j < 3; ++j) {
+            data_t value1 = t4[{i, j}];
+            data_t value2 = t4_expect[i][j];
+            CHECK_FLOAT_EQUAL(value1, value2, "check4");
         }
 }
 

@@ -56,6 +56,20 @@ struct Sub : public BinaryBasicOperator{
     }
 };
 
+struct ReLU: public UnaryBasicOperator {
+    template<typename IndexType, typename OperandType>
+    static data_t map(IndexType& inds, const OperandType& operand) {
+        return std::max(operand.eval(inds), 0.);
+    }
+};
+
+struct Sigmoid: public UnaryBasicOperator {
+        template<typename IndexType, typename OperandType>
+    static data_t map(IndexType& inds, const OperandType& operand) {
+        return 1 / (1+std::exp(-operand.eval(inds)));
+    }
+};
+
 }  // namespace op
 }  // namespace st
 #endif

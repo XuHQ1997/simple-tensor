@@ -9,6 +9,7 @@
 namespace st {
 namespace op {
 
+// This operator need specialize UnaryExpImpl in exp/exp_impl.h
 struct LogSoftmax {
 
     template<typename OperandType>

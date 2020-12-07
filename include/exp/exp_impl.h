@@ -8,6 +8,7 @@
 #include "utils/array.h"
 
 #include "exp/operator/log_softmax.h"
+#include "exp/operator/nll_loss.h"
 
 namespace st {
 
@@ -115,10 +116,10 @@ class UnaryExpImpl<op::LogSoftmax, OIType>
 public:
     explicit UnaryExpImpl(const OperandImplPtr<OIType>& ptr)
             : operand_ptr_(ptr),
-              batch_sum_exp(Alloc::shared_allocate<data_t>(operand_ptr_->size(0))),
-              batch_max_cls(Alloc::shared_allocate<data_t>(operand_ptr_->size(0))) {
-        op::LogSoftmax::precompute(*operand_ptr_, batch_sum_exp.get(), 
-                                   batch_max_cls.get());
+              batch_sum_exp_(Alloc::shared_allocate<data_t>(operand_ptr_->size(0))),
+              batch_max_cls_(Alloc::shared_allocate<data_t>(operand_ptr_->size(0))) {
+        op::LogSoftmax::precompute(*operand_ptr_, batch_sum_exp_.get(), 
+                                   batch_max_cls_.get());
     }
 
     index_t ndim(void) const { return op::LogSoftmax::ndim(*operand_ptr_); }
@@ -133,14 +134,71 @@ public:
 
     data_t eval(IndexArray& inds) const {
         return op::LogSoftmax::map(inds, *operand_ptr_, 
-                                   batch_sum_exp.get(), batch_max_cls.get());
+                                   batch_sum_exp_.get(), batch_max_cls_.get());
     }
 
 private:
     OperandImplPtr<OIType> operand_ptr_;
     
-    std::shared_ptr<data_t> batch_sum_exp;
-    std::shared_ptr<data_t> batch_max_cls;
+    std::shared_ptr<data_t> batch_sum_exp_;
+    std::shared_ptr<data_t> batch_max_cls_;
+};
+
+template<typename OIType>
+class UnaryExpImpl<op::MeanReduce, OIType>
+        : public ExpImpl<UnaryExpImpl<op::MeanReduce, OIType>> {
+public:
+    explicit UnaryExpImpl(const OperandImplPtr<OIType>& ptr, index_t reduce_dim)
+            : operand_ptr_(ptr),
+              reduce_dim_(reduce_dim) {}
+
+    index_t ndim(void) const { return op::MeanReduce::ndim(*operand_ptr_); }
+    index_t size(index_t idx) const { 
+        return op::MeanReduce::size(idx, *operand_ptr_, reduce_dim_); 
+    }
+
+    IndexArray size(void) const {
+        IndexArray shape(ndim());
+        for(index_t i = 0; i < shape.size(); ++i)
+            shape[i] = size(i);
+        return shape;
+    }
+
+    data_t eval(IndexArray& inds) const {
+        return op::MeanReduce::map(inds, *operand_ptr_, reduce_dim_);
+    }
+
+private:
+    OperandImplPtr<OIType> operand_ptr_;
+    index_t reduce_dim_;    
+};
+
+template<typename OIType>
+class UnaryExpImpl<op::NLLLoss, OIType>
+        : public ExpImpl<UnaryExpImpl<op::NLLLoss, OIType>> {
+public:
+    explicit UnaryExpImpl(const OperandImplPtr<OIType>& ptr,
+                          const std::shared_ptr<index_t>& batch_label)
+            : operand_ptr_(ptr),
+              batch_label_(batch_label) {}
+
+    index_t ndim(void) const { return op::NLLLoss::ndim(*operand_ptr_); }
+    index_t size(index_t idx) const { return op::NLLLoss::size(idx, *operand_ptr_); }
+
+    IndexArray size(void) const {
+        IndexArray shape(ndim());
+        for(index_t i = 0; i < shape.size(); ++i)
+            shape[i] = size(i);
+        return shape;
+    }
+
+    data_t eval(IndexArray& inds) const {
+        return op::NLLLoss::map(inds, *operand_ptr_, batch_label_.get());
+    }
+
+private:
+    OperandImplPtr<OIType> operand_ptr_;
+    std::shared_ptr<index_t> batch_label_;  
 };
 
 }  // namespace st

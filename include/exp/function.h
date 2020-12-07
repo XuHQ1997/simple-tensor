@@ -85,6 +85,17 @@ operator-(const Exp<LhsImplType>& lhs, const Exp<RhsImplType>& rhs) {
     return sub<LhsImplType, RhsImplType>(lhs, rhs);
 }
 
+template<typename OIType>
+Exp<UnaryExpImpl<ReLU, OIType>>
+relu(const Exp<OIType>& operand) {
+    return unary_operation_function<ReLU, OIType>(operand);
+}
+
+template<typename OIType>
+Exp<UnaryExpImpl<Sigmoid, OIType>>
+sigmoid(const Exp<OIType>& operand) {
+    return unary_operation_function<Sigmoid, OIType>(operand);
+}
 
 // function for matrix operation
 template<typename LhsImplType, typename RhsImplType>
@@ -120,12 +131,55 @@ batch_matrix_mul(const Exp<LhsImplType>& lhs, const Exp<RhsImplType>& rhs) {
     return binary_operation_function<BatchMatrixMul, LhsImplType, RhsImplType>(lhs, rhs);
 }
 
+// function for log_softmax
 template<typename OIType>
 Exp<UnaryExpImpl<LogSoftmax, OIType>>
 log_softmax(const Exp<OIType>& operand) {
     CHECK_EQUAL(operand.impl().ndim(), 2, 
-        "log_softmax Only supported for 2D Tensor, but got a %dD one", operand.impl().ndim());
+        "log_softmax Only supported for 2D Tensor, but got a %dD one", 
+        operand.impl().ndim());
     return unary_operation_function<LogSoftmax, OIType>(operand);
+}
+
+
+// function for nll_loss
+template<typename OIType>
+Exp<UnaryExpImpl<MeanReduce, OIType>>
+mean(const Exp<OIType>& operand, index_t dim) {
+    CHECK_IN_RANGE(dim, 0, operand.impl().ndim(), 
+        "Dimension out of range (expected to be in range of [0, %d), but got %d)",
+        operand.impl().ndim(), dim);
+    return Exp<UnaryExpImpl<MeanReduce, OIType>>(
+        Alloc::unique_construct<UnaryExpImpl<MeanReduce, OIType>>(
+            operand.impl_ptr(), dim
+        )
+    );
+}
+
+template<typename OIType>
+Exp<UnaryExpImpl<NLLLoss, OIType>>
+nll_loss(const Exp<OIType>& operand, 
+         const std::shared_ptr<index_t>& labels_ptr, 
+         index_t n_label=-1) {
+    CHECK_EQUAL(operand.impl().ndim(), 2, 
+        "NLL Loss is only supported for 2D Tensor, but got %dD one.", 
+        operand.impl().ndim());
+
+    index_t n_batch = operand.impl().size(0);
+    index_t n_cls = operand.impl().size(1);
+    CHECK_TRUE(n_label == -1 || n_label == n_batch,
+        "Batch size mismatch, x: %d, labels: %d", n_batch, n_label);
+
+    auto labels = labels_ptr.get();
+    for(index_t i = 0; i < n_batch; ++i)
+        CHECK_IN_RANGE(labels[i], 0, n_cls,
+            "%d classes got label of %d", n_cls, labels[i]);
+
+    return Exp<UnaryExpImpl<NLLLoss, OIType>>(
+        Alloc::unique_construct<UnaryExpImpl<NLLLoss, OIType>>(
+            operand.impl_ptr(), labels_ptr
+        )
+    );
 }
 
 }  // namespace op
