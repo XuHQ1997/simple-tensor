@@ -306,6 +306,20 @@ void test_numeric_operation() {
             data_t value2 = t4_expect[i][j];
             CHECK_FLOAT_EQUAL(value1, value2, "check4");
         }
+
+    Tensor t5 = op::mean(op::mean(t4, 0), 0);
+    CHECK_TRUE(t5.ndim() == 1 && t5.size(0) == 1, "check5");
+    CHECK_FLOAT_EQUAL(t5.item(), 0.536944, "check5");
+
+    Tensor t6 = op::argmax(t3, 1);
+    index_t t6_expect[][3] = {{1, 1, 0},
+                              {0, 0, 0}};
+    for(index_t i = 0; i < 2; ++i)
+        for(index_t j = 0; j < 3; ++j) {
+            index_t value1 = static_cast<index_t>(t6[{i, j}]);
+            index_t value2 = t6_expect[i][j];
+            CHECK_EQUAL(value1, value2, "check6");
+        }
 }
 
 int main() {

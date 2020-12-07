@@ -2,6 +2,7 @@
 #define EXP_EXP_IMPL_H
 
 #include <memory>
+#include <initializer_list>
 
 #include "utils/allocator.h"
 #include "utils/base_config.h"
@@ -9,6 +10,7 @@
 
 #include "exp/operator/log_softmax.h"
 #include "exp/operator/nll_loss.h"
+#include "exp/operator/reduce_op.h"
 
 namespace st {
 
@@ -166,6 +168,35 @@ public:
 
     data_t eval(IndexArray& inds) const {
         return op::MeanReduce::map(inds, *operand_ptr_, reduce_dim_);
+    }
+
+private:
+    OperandImplPtr<OIType> operand_ptr_;
+    index_t reduce_dim_;    
+};
+
+template<typename OIType>
+class UnaryExpImpl<op::Argmax, OIType>
+        : public ExpImpl<UnaryExpImpl<op::Argmax, OIType>> {
+public:
+    explicit UnaryExpImpl(const OperandImplPtr<OIType>& ptr, index_t reduce_dim)
+            : operand_ptr_(ptr),
+              reduce_dim_(reduce_dim) {}
+
+    index_t ndim(void) const { return op::Argmax::ndim(*operand_ptr_); }
+    index_t size(index_t idx) const { 
+        return op::Argmax::size(idx, *operand_ptr_, reduce_dim_); 
+    }
+
+    IndexArray size(void) const {
+        IndexArray shape(ndim());
+        for(index_t i = 0; i < shape.size(); ++i)
+            shape[i] = size(i);
+        return shape;
+    }
+
+    index_t eval(IndexArray& inds) const {
+        return op::Argmax::map(inds, *operand_ptr_, reduce_dim_);
     }
 
 private:

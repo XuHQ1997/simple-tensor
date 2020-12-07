@@ -7,6 +7,8 @@
 
 #include "exp/operator/basic_op.h"
 #include "exp/operator/matrix_op.h"
+#include "exp/operator/reduce_op.h"
+#include "exp/operator/nll_loss.h"
 #include "exp/operator/log_softmax.h"
 
 namespace st {
@@ -142,7 +144,7 @@ log_softmax(const Exp<OIType>& operand) {
 }
 
 
-// function for nll_loss
+// function for reduce operator
 template<typename OIType>
 Exp<UnaryExpImpl<MeanReduce, OIType>>
 mean(const Exp<OIType>& operand, index_t dim) {
@@ -156,6 +158,20 @@ mean(const Exp<OIType>& operand, index_t dim) {
     );
 }
 
+template<typename OIType>
+Exp<UnaryExpImpl<Argmax, OIType>>
+argmax(const Exp<OIType>& operand, index_t dim) {
+    CHECK_IN_RANGE(dim, 0, operand.impl().ndim(), 
+        "Dimension out of range (expected to be in range of [0, %d), but got %d)",
+        operand.impl().ndim(), dim);
+    return Exp<UnaryExpImpl<Argmax, OIType>>(
+        Alloc::unique_construct<UnaryExpImpl<Argmax, OIType>>(
+            operand.impl_ptr(), dim
+        )
+    );
+}
+
+// function for nll_loss
 template<typename OIType>
 Exp<UnaryExpImpl<NLLLoss, OIType>>
 nll_loss(const Exp<OIType>& operand, 

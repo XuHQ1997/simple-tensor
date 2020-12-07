@@ -17,7 +17,7 @@ public:
     explicit DynamicArray(index_t size) 
             : size_(size),
               dptr_(Alloc::unique_allocate<Dtype>(size_ * sizeof(Dtype))) {}
-    explicit DynamicArray(std::initializer_list<Dtype> data) 
+    DynamicArray(std::initializer_list<Dtype> data) 
             : DynamicArray(data.size()) {
         auto ptr = dptr_.get();
         for(auto d: data) {
@@ -29,7 +29,7 @@ public:
             : DynamicArray(other.size()) {
         std::memcpy(dptr_.get(), other.dptr_.get(), size_ * sizeof(Dtype));
     }
-    explicit DynamicArray(const Dtype* data, index_t size) 
+    DynamicArray(const Dtype* data, index_t size) 
             : DynamicArray(size) {
         std::memcpy(dptr_.get(), data, size_ * sizeof(Dtype));
     }
