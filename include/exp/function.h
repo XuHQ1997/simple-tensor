@@ -1,10 +1,13 @@
 #ifndef EXP_FUNCTION_H
 #define EXP_FUNCTION_H
 
-#include "exp/operator/basic_op.h"
-#include "exp/operator/matrix_op.h"
 #include "utils/allocator.h"
 #include "utils/exception.h"
+#include "exp/exp_impl.h"
+
+#include "exp/operator/basic_op.h"
+#include "exp/operator/matrix_op.h"
+#include "exp/operator/log_softmax.h"
 
 namespace st {
 
@@ -115,6 +118,14 @@ batch_matrix_mul(const Exp<LhsImplType>& lhs, const Exp<RhsImplType>& rhs) {
         "Size mismatch, m1: [%d, %d], m2: [%d, %d].",
         lhs_impl.size(1), lhs_impl.size(2), rhs_impl.size(1), rhs_impl.size(2));
     return binary_operation_function<BatchMatrixMul, LhsImplType, RhsImplType>(lhs, rhs);
+}
+
+template<typename OIType>
+Exp<UnaryExpImpl<LogSoftmax, OIType>>
+log_softmax(const Exp<OIType>& operand) {
+    CHECK_EQUAL(operand.impl().ndim(), 2, 
+        "log_softmax Only supported for 2D Tensor, but got a %dD one", operand.impl().ndim());
+    return unary_operation_function<LogSoftmax, OIType>(operand);
 }
 
 }  // namespace op

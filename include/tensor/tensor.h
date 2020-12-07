@@ -6,7 +6,7 @@
 #include "exp/exp.h"
 #include "exp/exp_impl.h"
 #include "tensor/tensor_impl.h"
-#include "exp/operator/function.h"
+
 
 namespace st {
 

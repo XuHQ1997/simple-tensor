@@ -6,7 +6,8 @@
 #include "utils/allocator.h"
 #include "utils/base_config.h"
 #include "utils/array.h"
-#include "exp/operator/basic_op.h"
+
+#include "exp/operator/log_softmax.h"
 
 namespace st {
 
@@ -71,10 +72,6 @@ public:
         return Op::map(inds, *operand_ptr_);
     }
 
-    data_t eval(index_t idx) const { 
-        return Op::map(idx, *operand_ptr_);
-    }
-
 private:
     OperandImplPtr<OIType> operand_ptr_;
 };
@@ -101,15 +98,50 @@ public:
         return Op::map(inds, *lhs_ptr_, *rhs_ptr_);
     }
 
-    data_t eval(index_t idx) const {
-        return Op::map(idx, *lhs_ptr_, *rhs_ptr_);
-    }
-
 private:
     OperandImplPtr<LhsImplType> lhs_ptr_;
     OperandImplPtr<RhsImplType> rhs_ptr_;
 };
 
-} // namespace st end
+} // namespace st
 
+// Some operators need store some states to accelerate computation.
+// We need partitially specialize the UnaryExpImpl or BinaryExpImpl here.
+namespace st {
+
+template<typename OIType>
+class UnaryExpImpl<op::LogSoftmax, OIType>
+        : public ExpImpl<UnaryExpImpl<op::LogSoftmax, OIType>> {
+public:
+    explicit UnaryExpImpl(const OperandImplPtr<OIType>& ptr)
+            : operand_ptr_(ptr),
+              batch_sum_exp(Alloc::shared_allocate<data_t>(operand_ptr_->size(0))),
+              batch_max_cls(Alloc::shared_allocate<data_t>(operand_ptr_->size(0))) {
+        op::LogSoftmax::precompute(*operand_ptr_, batch_sum_exp.get(), 
+                                   batch_max_cls.get());
+    }
+
+    index_t ndim(void) const { return op::LogSoftmax::ndim(*operand_ptr_); }
+    index_t size(index_t idx) const { return op::LogSoftmax::size(idx, *operand_ptr_); }
+
+    IndexArray size(void) const {
+        IndexArray shape(ndim());
+        for(index_t i = 0; i < shape.size(); ++i)
+            shape[i] = size(i);
+        return shape;
+    }
+
+    data_t eval(IndexArray& inds) const {
+        return op::LogSoftmax::map(inds, *operand_ptr_, 
+                                   batch_sum_exp.get(), batch_max_cls.get());
+    }
+
+private:
+    OperandImplPtr<OIType> operand_ptr_;
+    
+    std::shared_ptr<data_t> batch_sum_exp;
+    std::shared_ptr<data_t> batch_max_cls;
+};
+
+}  // namespace st
 #endif

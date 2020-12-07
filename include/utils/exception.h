@@ -41,7 +41,7 @@ struct Error: public std::exception {
     if((x) < (lower) || (x) >= (upper)) THROW_ERROR((format), ##__VA_ARGS__)
 
 #define CHECK_FLOAT_EQUAL(x, y, format, ...) \
-    if(std::abs((x)-(y)) > 1e-5) THROW_ERROR((format), ##__VA_ARGS__) 
+    if(std::abs((x)-(y)) > 1e-4) THROW_ERROR((format), ##__VA_ARGS__) 
 
 
 // assert macro only working for ExpImpl

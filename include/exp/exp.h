@@ -2,7 +2,7 @@
 #define EXP_EXP_H
 
 #include "exp/exp_impl.h"
-#include "exp/operator/function.h"
+#include "exp/function.h"
 
 namespace st {
 /*

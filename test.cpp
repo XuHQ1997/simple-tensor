@@ -8,16 +8,16 @@
 #include <iostream>
 #include <chrono>
 
-#include "tensor/shape.h"
-#include "tensor/storage.h"
-#include "tensor/tensor_impl.h"
-#include "tensor/tensor.h"
 #include "utils/base_config.h"
 #include "utils/array.h"
 // CHECK_XXX is defined in utils/exception.h
 // Only work in namespace st.
 #include "utils/exception.h"
-#include "exp/operator/function.h"
+#include "tensor/shape.h"
+#include "tensor/storage.h"
+#include "tensor/tensor_impl.h"
+#include "tensor/tensor.h"
+#include "exp/function.h"
 
 
 using std::cout;
@@ -267,11 +267,26 @@ void test_matrix_operation() {
 
 }
 
+void test_numeric_operation() {
+    using namespace st;
+    data_t data[] = {0.9742, 0.8367, 0.6840, 1.0074, 1.2784, 1.2193, 
+                     1.0252, 1.1873, 1.4498, 1.2189, 0.7510, 1.3621};
+    Tensor t0(data, Shape{3, 4});
+    data_t log_softmax_expect[3][4] = {{-1.295666, -1.433150, -1.585845, -1.262473},
+                                       {-1.289772, -1.348877, -1.542909, -1.380803},
+                                       {-1.165368, -1.396256, -1.864143, -1.253019}};
+    Tensor t1 = op::log_softmax(t0);
+    for(index_t i = 0; i < 3; ++i)
+        for(index_t j = 0; j < 4; ++j) {
+            data_t value1 = t1[{i, j}];
+            data_t value2 = log_softmax_expect[i][j];
+            CHECK_FLOAT_EQUAL(value1, value2, "check1");
+        }
+}
+
 int main() {
     using namespace st;
     using namespace std::chrono;
-
-    #define BLUE_STRING(s) 
 
     steady_clock::time_point start_tp = steady_clock::now();
 
@@ -287,6 +302,10 @@ int main() {
     cout << "\033[33mtest matrix operation...\033[0m" << endl;
     test_matrix_operation();
 
+    cout << "\033[33mtest numeric operation...\033[0m" << endl;
+    test_numeric_operation();
+
+    cout << "\033[33mcheck all memory is deallocated...\033[0m" << endl;
     CHECK_TRUE(Alloc::all_clear(), "check memory all clear");
 
     steady_clock::time_point end_tp = steady_clock::now();
