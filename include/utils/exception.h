@@ -43,6 +43,8 @@ struct Error: public std::exception {
 #define CHECK_FLOAT_EQUAL(x, y, format, ...) \
     if(std::abs((x)-(y)) > 1e-4) THROW_ERROR((format), ##__VA_ARGS__) 
 
+#define CHECK_INDEX_VALID(x, format, ...) \
+    if((x) > INDEX_MAX) THROW_ERROR((format), ##__VA_ARGS__)
 
 // assert macro only working for ExpImpl
 #define CHECK_EXP_SAME_SHAPE(e1, e2) do {\

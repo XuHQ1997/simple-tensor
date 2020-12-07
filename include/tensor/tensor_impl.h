@@ -95,6 +95,8 @@ TensorImpl& TensorImpl::__assign(const ImplType& exp_impl) {
             if(stride_[j] != 0) {
                 inds[j] = ii / stride_[j];
                 ii %= stride_[j];
+            } else {
+                inds[j] = 0;
             }
         }
         storage_[i] = exp_impl.eval(inds);
@@ -110,6 +112,8 @@ TensorImpl& TensorImpl::__inplacement_add(const ImplType& exp_impl) {
             if(stride_[j] != 0) {
                 inds[j] = ii / stride_[j];
                 ii %= stride_[j];
+            } else {
+                inds[j] = 0;
             }
         }
         storage_[i] += exp_impl.eval(inds);

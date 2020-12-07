@@ -10,6 +10,7 @@
 #include "exp/operator/reduce_op.h"
 #include "exp/operator/nll_loss.h"
 #include "exp/operator/log_softmax.h"
+#include "exp/operator/conv.h"
 
 namespace st {
 
@@ -196,6 +197,30 @@ nll_loss(const Exp<OIType>& operand,
             operand.impl_ptr(), labels_ptr
         )
     );
+}
+
+// function for conv
+template<typename OIType>
+Exp<UnaryExpImpl<MaxPool2d, OIType>>
+max_pool2d(const Exp<OIType>& operand, const MaxPool2d::Wsize& kernel_size,
+           const MaxPool2d::Wsize& stride_size, const MaxPool2d::Wsize& padding_size) {
+    CHECK_EQUAL(operand.impl().ndim(), 4, 
+        "MaxPool2d is only supported for 4D Tensor, but got a %dD one", 
+        operand.impl().ndim());
+    CHECK_INDEX_VALID(kernel_size.first, "Invalid kernel_size.");
+    CHECK_INDEX_VALID(kernel_size.second, "Invalid kernel_size.");
+    CHECK_IN_RANGE(stride_size.first, 1, INDEX_MAX, "Invalid stride_size.");
+    CHECK_IN_RANGE(stride_size.second, 1, INDEX_MAX, "Invalid stride_size.");
+    CHECK_INDEX_VALID(padding_size.first, "Invalid padding_size.");
+    CHECK_INDEX_VALID(padding_size.second, "Invalid padding_size.");
+    auto&& exp_ptr = Alloc::unique_construct<UnaryExpImpl<MaxPool2d, OIType>>(
+        operand.impl_ptr(), kernel_size, stride_size, padding_size 
+    );
+    CHECK_INDEX_VALID(exp_ptr->size(2), 
+        "Kernel size (%d %d) is too large", kernel_size.first, kernel_size.second);
+    CHECK_INDEX_VALID(exp_ptr->size(3), 
+        "Kernel size (%d %d) is too large", kernel_size.first, kernel_size.second);
+    return Exp<UnaryExpImpl<MaxPool2d, OIType>>(std::move(exp_ptr));
 }
 
 }  // namespace op

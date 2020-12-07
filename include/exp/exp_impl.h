@@ -11,6 +11,7 @@
 #include "exp/operator/log_softmax.h"
 #include "exp/operator/nll_loss.h"
 #include "exp/operator/reduce_op.h"
+#include "exp/operator/conv.h"
 
 namespace st {
 
@@ -230,6 +231,53 @@ public:
 private:
     OperandImplPtr<OIType> operand_ptr_;
     std::shared_ptr<index_t> batch_label_;  
+};
+
+template<typename OIType>
+class UnaryExpImpl<op::MaxPool2d, OIType>
+        : public ExpImpl<UnaryExpImpl<op::MaxPool2d, OIType>> {
+public:
+    UnaryExpImpl(const OperandImplPtr<OIType>& ptr,
+                 const op::MaxPool2d::Wsize& kernel_size,
+                 const op::MaxPool2d::Wsize& stride_size,
+                 const op::MaxPool2d::Wsize& padding_size) 
+            : operand_ptr_(ptr),
+              kernel_size_(kernel_size),
+              stride_size_(stride_size),
+              padding_size_(padding_size) {
+        index_t h = operand_ptr_->size(2);
+        index_t w = operand_ptr_->size(3);
+        out_size_.first = 
+            (h + 2*padding_size_.first - kernel_size_.first) / stride_size_.first + 1;
+        out_size_.second = 
+            (w + 2*padding_size_.second - kernel_size_.second) / stride_size_.second + 1
+        ;
+    }
+
+    index_t ndim(void) const { return op::MaxPool2d::ndim(*operand_ptr_); }
+    index_t size(index_t idx) const {
+        return op::MaxPool2d::size(idx, *operand_ptr_, out_size_);
+    }
+
+    IndexArray size(void) const {
+        IndexArray shape(ndim());
+        for(index_t i = 0; i < shape.size(); ++i)
+            shape[i] = size(i);
+        return shape;
+    }
+
+    data_t eval(IndexArray& inds) const {
+        return op::MaxPool2d::map(inds, *operand_ptr_, kernel_size_,
+                                  stride_size_, padding_size_);
+    }
+
+private:
+    OperandImplPtr<OIType> operand_ptr_;
+
+    op::MaxPool2d::Wsize kernel_size_;
+    op::MaxPool2d::Wsize stride_size_;
+    op::MaxPool2d::Wsize padding_size_;
+    op::MaxPool2d::Wsize out_size_;
 };
 
 }  // namespace st

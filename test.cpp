@@ -322,6 +322,42 @@ void test_numeric_operation() {
         }
 }
 
+void test_conv_operation() {
+    using namespace st;
+    data_t data[6][4] = {{0.4279, 0.7488, 0.3639, 0.5433}, {0.2849, 0.6536, 0.8932, 0.9341}, {0.9640, 0.4822, 0.1887, 0.9457},
+                         {0.2132, 0.0185, 0.0163, 0.9874}, {0.2039, 0.8020, 0.3766, 0.6537}, {0.8543, 0.3589, 0.5178, 0.7816}};
+    Tensor t0(reinterpret_cast<data_t*>(data), Shape{1, 1, 6, 4});
+    
+    Tensor t1 = op::max_pool2d(t0, {2, 2}, {1, 1}, {1, 1});
+    index_t t1_size_expect[] = {1, 1, 7, 5};
+    data_t t1_expect[7][5] = {{0.4279, 0.7488, 0.7488, 0.5433, 0.5433}, {0.4279, 0.7488, 0.8932, 0.9341, 0.9341},
+                              {0.9640, 0.9640, 0.8932, 0.9457, 0.9457}, {0.9640, 0.9640, 0.4822, 0.9874, 0.9874},
+                              {0.2132, 0.8020, 0.8020, 0.9874, 0.9874}, {0.8543, 0.8543, 0.8020, 0.7816, 0.7816},
+                              {0.8543, 0.8543, 0.5178, 0.7816, 0.7816}};
+    CHECK_EQUAL(t1.ndim(), 4, "check1");
+    for(index_t i = 0; i < 4; ++i)
+        CHECK_EQUAL(t1.size(i), t1_size_expect[i], "check1");
+    for(index_t i = 0; i < 7; ++i)
+        for(index_t j = 0; j < 5; ++j) {
+            data_t value1 = t1[{0, 0, i, j}];
+            data_t value2 = t1_expect[i][j];
+            CHECK_FLOAT_EQUAL(value1, value2, "check2");
+        }
+
+    Tensor t2 = op::max_pool2d(t1, {3, 4}, {2, 3}, {0, 1});
+    index_t t2_size_expect[] = {1, 1, 3, 2};
+    data_t t2_expect[][2] = {{0.9640, 0.9457}, {0.9640, 0.9874}, {0.8543, 0.9874}};
+    CHECK_EQUAL(t2.ndim(), 4, "check3");
+    for(index_t i = 0; i < 4; ++i)
+        CHECK_EQUAL(t2.size(i), t2_size_expect[i], "check3");
+    for(index_t i = 0; i < 3; ++i)
+        for(index_t j = 0; j < 2; ++j) {
+            data_t value1 = t2[{0, 0, i, j}];
+            data_t value2 = t2_expect[i][j];
+            CHECK_EQUAL(value1, value2, "check3");
+        }
+}
+
 int main() {
     using namespace st;
     using namespace std::chrono;
@@ -342,6 +378,9 @@ int main() {
 
     cout << "\033[33mtest numeric operation...\033[0m" << endl;
     test_numeric_operation();
+
+    cout << "\033[33mtest conv operation...\033[0m" << endl;
+    test_conv_operation();
 
     cout << "\033[33mcheck all memory is deallocated...\033[0m" << endl;
     CHECK_TRUE(Alloc::all_clear(), "check memory all clear");
