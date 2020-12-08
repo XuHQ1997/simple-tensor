@@ -1,6 +1,8 @@
 #ifndef TENSOR_TENSOR_IMPL_H
 #define TENSOR_TENSOR_IMPL_H
 
+#include <initializer_list>
+
 #include "exp/exp_impl.h"
 #include "tensor/storage.h"
 #include "tensor/shape.h"
@@ -49,6 +51,8 @@ public:
     Alloc::NontrivialUniquePtr<TensorImpl> view(const Shape& shape) const;
     Alloc::NontrivialUniquePtr<TensorImpl> squeeze(void) const;
     Alloc::NontrivialUniquePtr<TensorImpl> unsqueeze(index_t dim) const;
+    Alloc::NontrivialUniquePtr<TensorImpl> 
+    permute(std::initializer_list<index_t> dims) const;
 
     // member function for expression template
     data_t eval(IndexArray& inds) const;

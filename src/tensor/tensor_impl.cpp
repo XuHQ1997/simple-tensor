@@ -164,6 +164,25 @@ TensorImpl::transpose(index_t dim1, index_t dim2) const {
 }
 
 Alloc::NontrivialUniquePtr<TensorImpl>
+TensorImpl::permute(std::initializer_list<index_t> dims) const {
+    CHECK_EQUAL(dims.size(), ndim(),
+        "Dimension not match (expected dims of %d, but got %d)",
+        ndim(), dims.size());
+
+    IndexArray shape(ndim());
+    IndexArray stride(ndim());
+    index_t i = 0;
+    for(index_t idx: dims) {
+        shape[i] = shape_[idx];
+        stride[i] = stride_[idx];
+        ++i;
+    }
+    return Alloc::unique_construct<TensorImpl>(
+        Storage(storage_), Shape(std::move(shape)), std::move(stride)
+    );
+}
+
+Alloc::NontrivialUniquePtr<TensorImpl>
 TensorImpl::view(const Shape& shape) const {
     CHECK_TRUE(is_contiguous(),
         "view() is only supported to contiguous tensor");

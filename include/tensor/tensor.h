@@ -2,6 +2,7 @@
 #define TENSOR_TENSOR_H
 
 #include <memory>
+#include <initializer_list>
 
 #include "exp/exp.h"
 #include "exp/exp_impl.h"
@@ -53,6 +54,7 @@ public:
     Tensor view(const Shape& shape) const;
     Tensor squeeze(void) const;
     Tensor unsqueeze(index_t dim) const;
+    Tensor permute(std::initializer_list<index_t> dims) const;
 
     template<typename ImplType> Tensor& operator=(const Exp<ImplType>& exp);
     template<typename ImplType> Tensor& operator+=(const Exp<ImplType>& exp);

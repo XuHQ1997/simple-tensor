@@ -144,6 +144,21 @@ void test_Tensor() {
             }
         }
     }
+
+    auto t7 = t5.permute({0, 2, 3, 4, 1});
+    CHECK_EQUAL(t7.ndim(), 5, "check7");
+    Shape shape_t7({1, 1, 2, 2, 3});
+    for(index_t i = 0; i < 5; ++i)
+        CHECK_EQUAL(t7.size(i), shape_t7[i], "check7");
+    cout << t5 << endl;
+    cout << t7 << endl;
+    for(index_t i = 0; i < 2; ++i)
+        for(index_t j = 0; j < 2; ++j)
+            for(index_t k = 0; k < 3; ++k) {
+                data_t value1 = t7[{0, 0, i, j, k}];
+                data_t value2 = t5[{0, k, 0, i, j}];
+                CHECK_FLOAT_EQUAL(value1, value2, "check7");
+            }
 }
 
 void test_basic_operation() {

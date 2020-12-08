@@ -65,6 +65,9 @@ Tensor Tensor::slice(index_t start_idx, index_t end_idx, index_t dim) const {
 Tensor Tensor::transpose(index_t dim1, index_t dim2) const {
     return Tensor(impl_ptr_->transpose(dim1, dim2));
 }
+Tensor Tensor::permute(std::initializer_list<index_t> dims) const {
+    return Tensor(impl_ptr_->permute(dims));
+}
 Tensor Tensor::view(const Shape& shape) const {
     return Tensor(impl_ptr_->view(shape));
 }
