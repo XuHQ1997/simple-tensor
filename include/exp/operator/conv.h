@@ -17,17 +17,46 @@ struct Img2col {
     static index_t ndim(const OperandType& operand) { return 2; }
 
     template<typename OperandType>
-    static index_t size(index_t idx, const OperandType& operand, 
-                        index_t n_channel, index_t n_batch,
-                        const Wsize& kernel_size, const Wsize& out_size) {
-        return 0;
+    static index_t size(index_t idx, const OperandType& operand, const Wsize& size) {
+        return idx == 0 ? size.first : size.second;
     }
 
     template<typename OperandType>
-    static data_t map(IndexArray& inds, const OperandType& operand,
-                      index_t n_channel, index_t n_batch,
-                      const Wsize& kernel_size, const Wsize& out_size) {
-        return 0;
+    static data_t map(IndexArray& inds, const OperandType& operand, 
+                      const Wsize& kernel_size, const Wsize& stride_size,
+                      const Wsize& padding_size, const Wsize& out_size) {
+        index_t n_batch = operand.size(0);
+        index_t h = operand.size(2);
+        index_t w = operand.size(3);
+        index_t row = inds[0];
+        index_t col = inds[1];
+        
+        // size(0) = c * kh * kw
+        index_t c_idx = row / (kernel_size.first * kernel_size.second);
+        row %= kernel_size.first * kernel_size.second;
+        index_t kh_idx = row / kernel_size.second;
+        index_t kw_idx = row % kernel_size.second;
+
+        // size(1) = oh * ow * b
+        index_t h_idx = col / (out_size.second * n_batch);
+        col %= (n_batch * out_size.second);
+        index_t w_idx = col / n_batch;
+        index_t b_idx = col % n_batch;
+
+        // In fact, index_t is unsigned int, which can't be negative.
+        // So we can't substract padding_size here.
+        h_idx = h_idx * stride_size.first /*- padding_size.first*/ + kh_idx;
+        w_idx = w_idx * stride_size.second /*- padding_size.second*/ + kw_idx;
+
+        if(h_idx < padding_size.first || h_idx >= h + padding_size.first
+                || w_idx < padding_size.second || w_idx >= w + padding_size.second)
+            return 0;
+
+        h_idx -= padding_size.first;
+        w_idx -= padding_size.second;
+        IndexArray operand_inds{b_idx, c_idx, h_idx, w_idx};
+
+        return operand.eval(operand_inds);
     }
 };
 

@@ -234,6 +234,57 @@ private:
 };
 
 template<typename OIType>
+class UnaryExpImpl<op::Img2col, OIType>
+        : public ExpImpl<UnaryExpImpl<op::Img2col, OIType>> {
+public:
+    UnaryExpImpl(const OperandImplPtr<OIType>& ptr,
+                 const op::Img2col::Wsize& kernel_size,
+                 const op::Img2col::Wsize& stride_size,
+                 const op::Img2col::Wsize& padding_size) 
+            : operand_ptr_(ptr),
+              kernel_size_(kernel_size),
+              stride_size_(stride_size),
+              padding_size_(padding_size) {
+        index_t b = operand_ptr_->size(0);
+        index_t c = operand_ptr_->size(1);
+        index_t h = operand_ptr_->size(2);
+        index_t w = operand_ptr_->size(3);
+        out_size_.first = 
+            (h + 2*padding_size_.first - kernel_size_.first) / stride_size_.first + 1;
+        out_size_.second = 
+            (w + 2*padding_size_.second - kernel_size_.second) / stride_size_.second + 1;
+        shape_.first = c * kernel_size_.first * kernel_size_.second;
+        shape_.second = out_size_.first * out_size_.second * b;
+    }
+
+    index_t ndim(void) const { return op::Img2col::ndim(*operand_ptr_); }
+    index_t size(index_t idx) const {
+        return op::Img2col::size(idx, *operand_ptr_, shape_);
+    }
+
+    IndexArray size(void) const {
+        IndexArray shape(ndim());
+        for(index_t i = 0; i < shape.size(); ++i)
+            shape[i] = size(i);
+        return shape;
+    }
+
+    data_t eval(IndexArray& inds) const {
+        return op::Img2col::map(inds, *operand_ptr_, kernel_size_,
+                                  stride_size_, padding_size_, out_size_);
+    }
+
+private:
+    OperandImplPtr<OIType> operand_ptr_;
+
+    op::Img2col::Wsize kernel_size_;
+    op::Img2col::Wsize stride_size_;
+    op::Img2col::Wsize padding_size_;
+    op::Img2col::Wsize out_size_;
+    op::Img2col::Wsize shape_;
+};
+
+template<typename OIType>
 class UnaryExpImpl<op::MaxPool2d, OIType>
         : public ExpImpl<UnaryExpImpl<op::MaxPool2d, OIType>> {
 public:
@@ -250,8 +301,7 @@ public:
         out_size_.first = 
             (h + 2*padding_size_.first - kernel_size_.first) / stride_size_.first + 1;
         out_size_.second = 
-            (w + 2*padding_size_.second - kernel_size_.second) / stride_size_.second + 1
-        ;
+            (w + 2*padding_size_.second - kernel_size_.second) / stride_size_.second + 1;
     }
 
     index_t ndim(void) const { return op::MaxPool2d::ndim(*operand_ptr_); }

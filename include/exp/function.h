@@ -201,6 +201,30 @@ nll_loss(const Exp<OIType>& operand,
 
 // function for conv
 template<typename OIType>
+Exp<UnaryExpImpl<Img2col, OIType>>
+img2col(const Exp<OIType>& operand, const Img2col::Wsize& kernel_size,
+        const Img2col::Wsize& stride_size, const Img2col::Wsize& padding_size) {
+    CHECK_EQUAL(operand.impl().ndim(), 4, 
+        "Img2col is only supported for 4D Tensor, but got a %dD one", 
+        operand.impl().ndim());
+    CHECK_INDEX_VALID(kernel_size.first, "Invalid kernel_size.");
+    CHECK_INDEX_VALID(kernel_size.second, "Invalid kernel_size.");
+    CHECK_IN_RANGE(stride_size.first, 1, INDEX_MAX, "Invalid stride_size.");
+    CHECK_IN_RANGE(stride_size.second, 1, INDEX_MAX, "Invalid stride_size.");
+    CHECK_INDEX_VALID(padding_size.first, "Invalid padding_size.");
+    CHECK_INDEX_VALID(padding_size.second, "Invalid padding_size.");
+    CHECK_INDEX_VALID(operand.impl().size(2) + 2*padding_size.first - kernel_size.first, 
+        "Kernel size (%d %d) is too large", kernel_size.first, kernel_size.second);
+    CHECK_INDEX_VALID(operand.impl().size(3) + 2*padding_size.second - kernel_size.second, 
+        "Kernel size (%d %d) is too large", kernel_size.first, kernel_size.second);
+    return Exp<UnaryExpImpl<Img2col, OIType>>(
+        Alloc::unique_construct<UnaryExpImpl<Img2col, OIType>>(
+            operand.impl_ptr(), kernel_size, stride_size, padding_size 
+        )
+    );
+}
+
+template<typename OIType>
 Exp<UnaryExpImpl<MaxPool2d, OIType>>
 max_pool2d(const Exp<OIType>& operand, const MaxPool2d::Wsize& kernel_size,
            const MaxPool2d::Wsize& stride_size, const MaxPool2d::Wsize& padding_size) {
@@ -213,14 +237,15 @@ max_pool2d(const Exp<OIType>& operand, const MaxPool2d::Wsize& kernel_size,
     CHECK_IN_RANGE(stride_size.second, 1, INDEX_MAX, "Invalid stride_size.");
     CHECK_INDEX_VALID(padding_size.first, "Invalid padding_size.");
     CHECK_INDEX_VALID(padding_size.second, "Invalid padding_size.");
-    auto&& exp_ptr = Alloc::unique_construct<UnaryExpImpl<MaxPool2d, OIType>>(
-        operand.impl_ptr(), kernel_size, stride_size, padding_size 
+    CHECK_INDEX_VALID(operand.impl().size(2) + 2*padding_size.first - kernel_size.first, 
+        "Kernel size (%d %d) is too large", kernel_size.first, kernel_size.second);
+    CHECK_INDEX_VALID(operand.impl().size(3) + 2*padding_size.second - kernel_size.second, 
+        "Kernel size (%d %d) is too large", kernel_size.first, kernel_size.second);
+    return Exp<UnaryExpImpl<MaxPool2d, OIType>>(
+        Alloc::unique_construct<UnaryExpImpl<MaxPool2d, OIType>>(
+            operand.impl_ptr(), kernel_size, stride_size, padding_size 
+        )
     );
-    CHECK_INDEX_VALID(exp_ptr->size(2), 
-        "Kernel size (%d %d) is too large", kernel_size.first, kernel_size.second);
-    CHECK_INDEX_VALID(exp_ptr->size(3), 
-        "Kernel size (%d %d) is too large", kernel_size.first, kernel_size.second);
-    return Exp<UnaryExpImpl<MaxPool2d, OIType>>(std::move(exp_ptr));
 }
 
 }  // namespace op
