@@ -4,6 +4,7 @@
 #include "utils/allocator.h"
 #include "utils/exception.h"
 #include "exp/exp_impl.h"
+#include "exp/exp.h"
 
 #include "exp/operator/basic_op.h"
 #include "exp/operator/matrix_op.h"
@@ -245,6 +246,13 @@ max_pool2d(const Exp<OIType>& operand, const MaxPool2d::Wsize& kernel_size,
         Alloc::unique_construct<UnaryExpImpl<MaxPool2d, OIType>>(
             operand.impl_ptr(), kernel_size, stride_size, padding_size 
         )
+    );
+}
+
+Exp<UnaryExpImpl<Constant, data_t>>
+constant(data_t value) {
+    return Exp<UnaryExpImpl<Constant, data_t>>(
+        Alloc::unique_construct<UnaryExpImpl<Constant, data_t>>(value)
     );
 }
 

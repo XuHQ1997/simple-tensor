@@ -2,7 +2,7 @@
 #define EXP_EXP_H
 
 #include "exp/exp_impl.h"
-#include "exp/function.h"
+#include "exp/operator/basic_op.h"
 
 namespace st {
 /*
@@ -30,10 +30,29 @@ public:
             :impl_ptr_(std::move(ptr)) {}
     const ExpImplPtr<ImplType>& impl_ptr(void) const { return impl_ptr_; }
     const ImplType& impl(void) const { return *impl_ptr_; }
-    
+
 protected:
     ExpImplPtr<ImplType> impl_ptr_;
 };
+
+// forward declaration and using declaration
+namespace op {
+template<typename OIType>
+Exp<UnaryExpImpl<Minus, OIType>> 
+operator-(const Exp<OIType>& operand);
+
+template<typename LhsImplType, typename RhsImplType>
+Exp<BinaryExpImpl<Add, LhsImplType, RhsImplType>>
+operator+(const Exp<LhsImplType>& lhs, const Exp<RhsImplType>& rhs);
+
+template<typename LhsImplType, typename RhsImplType>
+Exp<BinaryExpImpl<Mul, LhsImplType, RhsImplType>>
+operator*(const Exp<LhsImplType>& lhs, const Exp<RhsImplType>& rhs);
+
+template<typename LhsImplType, typename RhsImplType>
+Exp<BinaryExpImpl<Sub, LhsImplType, RhsImplType>>
+operator-(const Exp<LhsImplType>& lhs, const Exp<RhsImplType>& rhs);
+}  // namespace op
 
 using op::operator+;
 using op::operator*;

@@ -242,6 +242,14 @@ void test_basic_operation() {
                     data_t value2 = t8[{i, j, k}];
                     CHECK_FLOAT_EQUAL(value1, value2, "check 4");
                 }
+    
+    Tensor t11 = t1 + op::constant(1);
+    for(index_t i = 0; i < 3; ++i)
+        for(index_t j = 0; j < 4; ++j) {
+            data_t value1 = t11[{i, j}];
+            data_t value2 = t1[{i, j}] + 1;
+            CHECK_EQUAL(value1, value2, "check5");
+        }
 }
 
 void test_matrix_operation() {

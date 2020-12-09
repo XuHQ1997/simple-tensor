@@ -12,6 +12,7 @@
 #include "exp/operator/nll_loss.h"
 #include "exp/operator/reduce_op.h"
 #include "exp/operator/conv.h"
+#include "exp/operator/constant.h"
 
 namespace st {
 
@@ -328,6 +329,27 @@ private:
     op::MaxPool2d::Wsize stride_size_;
     op::MaxPool2d::Wsize padding_size_;
     op::MaxPool2d::Wsize out_size_;
+};
+
+template<> class UnaryExpImpl<op::Constant, data_t>
+        : public ExpImpl<UnaryExpImpl<op::Constant, data_t>> {
+public:
+    UnaryExpImpl(data_t value) : value_(value) {}
+    index_t ndim(void) const { return op::Constant::ndim(); }
+    index_t size(index_t idx) const { return op::Constant::size(idx); }
+
+    IndexArray size(void) const {
+        IndexArray shape(ndim());
+        for(index_t i = 0; i < shape.size(); ++i)
+            shape[i] = size(i);
+        return shape;
+    }
+
+    data_t eval(IndexArray& inds) const {
+        return op::Constant::map(inds, value_);
+    }
+private:
+    data_t value_;
 };
 
 }  // namespace st
