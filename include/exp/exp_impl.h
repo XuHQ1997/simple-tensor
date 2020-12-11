@@ -24,26 +24,35 @@ template<typename Op, typename OIType> class UnaryExpImpl;
 template<typename Op, typename LhsImplType, typename RhsImplType> class BinaryExpImpl;
 
 
-template<typename Subtype>
+template<typename ImplType>
 class ExpImpl {
 public:
-    friend class ExpImplPtr<Subtype>;
+    index_t refcount(void) const { return refcount_; }
+    index_t gradcount(void) const { return gradcount_; }
+    friend class ExpImplPtr<ImplType>;
 private:
     index_t refcount_ = 0;
     index_t gradcount_ = 0;
 };
 
-template<typename Subtype> 
+template<typename ImplType> 
 class ExpImplPtr {
 public:
-    explicit ExpImplPtr(Alloc::NontrivialUniquePtr<Subtype>&& ptr)
+    ExpImplPtr() : ptr_(nullptr) {}
+    explicit ExpImplPtr(Alloc::NontrivialUniquePtr<ImplType>&& ptr)
             : ptr_(ptr.release()) { increment_refcount(); }
     ExpImplPtr(const ExpImplPtr& other)
             : ptr_(other.ptr_) { increment_refcount(); }
     ~ExpImplPtr() { decrease_refcount(); }
 
-    Subtype* operator->(void) const { return static_cast<Subtype*>(ptr_); }
-    const Subtype& operator*(void) const { return *static_cast<Subtype*>(ptr_); }
+    ImplType* operator->(void) const { return static_cast<ImplType*>(ptr_); }
+    const ImplType& operator*(void) const { return *static_cast<ImplType*>(ptr_); }
+    explicit operator bool() const { return ptr_ != nullptr; }
+
+    template<typename GradImplType>
+    void invoke_backward(const ExpImpl<GradImplType>& grad) {
+        static_cast<ImplType*>(ptr_)->backward(grad);
+    }
 private:
     void increment_refcount() { ++ptr_->refcount_; }
 
@@ -53,8 +62,8 @@ private:
             delete_handler(static_cast<void*>(ptr_));
     }
 
-    ExpImpl<Subtype>* ptr_;
-    Alloc::nontrivial_delete_handler<Subtype> delete_handler;
+    ExpImpl<ImplType>* ptr_;
+    Alloc::nontrivial_delete_handler<ImplType> delete_handler;
 };
 
 template<typename Op, typename OIType>  // OIType = OperandImplType
@@ -110,8 +119,14 @@ private:
 
 } // namespace st
 
-// Some operators need store some states to accelerate computation.
-// We need partitially specialize the UnaryExpImpl or BinaryExpImpl here.
+
+// Template specialization for ExpImplPtr, UnaryExpImpl and BinaryExpImpl.
+// 1. ExpImplPtr need be specialized for TensorImpl,
+//    because TensorImpl' version need check before invoking its backward.
+//    But to make the dependency between header files more clear, I put this
+//    specialization in tensor/tensor_impl.h
+// 2. Some operators need store some states or parameters in UnaryExpImpl,
+//    or BinaryExpImpl.
 namespace st {
 
 template<typename OIType>

@@ -159,6 +159,7 @@ void test_Tensor() {
             }
 }
 
+// TODO: test assignment for uncontiguous Tensor.
 void test_basic_operation() {
     using namespace st;
 
@@ -418,6 +419,13 @@ void test_conv_operation() {
         }
 }
 
+// TODO: 
+// 1. test tensor version control
+// 2. TensorImpl::operator+= blocks backward.
+void test_view_backward() {
+
+}
+
 int main() {
     using namespace st;
     using namespace std::chrono;
@@ -441,6 +449,9 @@ int main() {
 
     cout << "\033[33mtest conv operation...\033[0m" << endl;
     test_conv_operation();
+
+    cout << "\033[33mtest conv operation...\033[0m" << endl;
+    test_view_backward();
 
     cout << "\033[33mcheck all memory is deallocated...\033[0m" << endl;
     CHECK_TRUE(Alloc::all_clear(), "check memory all clear");

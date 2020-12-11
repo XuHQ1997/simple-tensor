@@ -1,4 +1,5 @@
 #include "tensor/tensor.h"
+#include "exp/function.h"
 
 namespace st {
 
@@ -76,6 +77,12 @@ Tensor Tensor::squeeze(void) const {
 }
 Tensor Tensor::unsqueeze(index_t dim) const {
     return Tensor(impl_ptr_->unsqueeze(dim));
+}
+
+void Tensor::backward(void) {
+    CHECK_TRUE(impl_ptr_->requires_grad(),
+        "Tensor doesn't require grad and doesn't have a grad_fn.");
+    impl_ptr_.invoke_backward(op::constant(1));
 }
 
 // friend function

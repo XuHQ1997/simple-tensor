@@ -15,13 +15,15 @@ TensorImpl::TensorImpl(const Storage& storage,
         : storage_(storage),
           shape_(shape),
           stride_(stride),
-          requires_grad_(requires_grad_) {}
+          requires_grad_(requires_grad_),
+          gradmeta_ptr_(nullptr) {}
 
 TensorImpl::TensorImpl(const Storage& storage, const Shape& shape, bool requires_grad) 
         : storage_(storage), 
           shape_(shape), 
           stride_(shape_.ndim()), 
-          requires_grad_(requires_grad) {
+          requires_grad_(requires_grad),
+          gradmeta_ptr_(nullptr) {
     // if shape_[i] == 1, set stride_[i] = 0. For broadcasting operatoion.
     for(int i = 0; i < stride_.size(); ++i)
         stride_[i] = shape_[i] == 1 ? 0 : shape_.subsize(i + 1);
@@ -40,10 +42,16 @@ TensorImpl::TensorImpl(Storage&& storage,
         : storage_(std::move(storage)),
           shape_(std::move(shape)),
           stride_(std::move(stride)),
-          requires_grad_(requires_grad) {}
+          requires_grad_(requires_grad),
+          gradmeta_ptr_(nullptr) {}
 
 TensorImpl& TensorImpl::operator=(const TensorImpl& other) {
-    return __assign(other);
+    CHECK_EXP_BROADCAST(*this, other);
+    storage_.increment_version();
+    if(is_contiguous())
+        return __assign(other);
+    else    
+        return __assign_uncontiguous(other);
 }
 
 bool TensorImpl::is_contiguous(void) const {
@@ -63,6 +71,7 @@ data_t& TensorImpl::operator[](std::initializer_list<index_t> inds) {
             "Index %d is out of bound for dimension %d with size %d", idx, i, size(i));
         offset += idx * stride_[i++];
     }
+    storage_.increment_version();
     return storage_[offset]; 
 }
 
@@ -230,8 +239,8 @@ TensorImpl::unsqueeze(index_t dim) const {
 }
 
 std::ostream& operator<<(std::ostream& out, const TensorImpl& src) {
-    TensorImpl t(src);
-    t.requires_grad_ = false;
+    TensorImpl t(src.size());
+    t = src;
 
     std::ios_base::fmtflags flags = out.flags();
     out.setf(std::ios::fixed);

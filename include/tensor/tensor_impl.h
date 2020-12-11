@@ -2,6 +2,7 @@
 #define TENSOR_TENSOR_IMPL_H
 
 #include <initializer_list>
+#include <utility>
 
 #include "exp/exp_impl.h"
 #include "tensor/storage.h"
@@ -10,6 +11,8 @@
 
 
 namespace st {
+
+struct AutoGradMeta;
 
 class TensorImpl : public ExpImpl<TensorImpl> {
 public:
@@ -25,7 +28,7 @@ public:
     TensorImpl(Storage&& storage, Shape&& shape, IndexArray&& stride, 
            bool requires_grad=false);
     
-    TensorImpl(const TensorImpl& other) = default;
+    TensorImpl(const TensorImpl& other) = delete;
     TensorImpl(TensorImpl&& other) = default;
     TensorImpl& operator=(const TensorImpl& other);
 
@@ -36,7 +39,8 @@ public:
     index_t offset(void) const { return storage_.offset(); }
     const IndexArray& stride(void) const { return stride_; }
     index_t version(void) const { return storage_.version(); }
-    
+    bool requires_grad(void) const { return requires_grad_; }
+
     // other method
     bool is_contiguous(void) const;
     
@@ -62,33 +66,128 @@ public:
 
     // friend function
     friend std::ostream& operator<<(std::ostream& out, const TensorImpl& t);
+    friend ExpImplPtr<TensorImpl>;
 private:
     template<typename ImplType> 
     TensorImpl& __assign(const ImplType& exp_impl);
     template<typename ImplType> 
     TensorImpl& __inplacement_add(const ImplType& exp_impl);
+    template<typename ImplType> 
+    TensorImpl& __assign_uncontiguous(const ImplType& exp_impl);
+    template<typename ImplType> 
+    TensorImpl& __inplacement_add_uncontiguous(const ImplType& exp_impl);
+    
+
+    template<typename ImplType> void backward(const ExpImpl<ImplType>& grad);
+    void backward(void);
 
     Storage storage_;
     Shape shape_;
     IndexArray stride_;
 
     bool requires_grad_;
+    Alloc::NontrivialUniquePtr<AutoGradMeta> gradmeta_ptr_;
+};
+}  // namespace st
+
+
+namespace st {
+// The AutoGradMeta can't be implemented as static polymorphism like ExpImpl.
+// We can only use virtual function here. Because TensorImpl hold a pointer of
+// AutoGradMeta, and the pointer doesn't depend on any template parameters.
+struct AutoGradMeta {
+    TensorImpl grad_;
+    bool from_view_;
+    // If a TensorImpl is constructed by slice(), transpose() or view(),
+    // its next_exp_ would be another TensorImpl. The following template 
+    // specializations can make sure this.
+    //
+    // And the two TensorImpls share the same grad_'s storage. So just invoke 
+    // the backward but do not pass grad.
+    void invoke_backward(void) {
+        
+    }
+};
+
+
+}  // namespace st
+
+
+namespace st {
+
+// Template specialization for ExpImplPtr
+template<> 
+class ExpImplPtr<TensorImpl> {
+public:
+    ExpImplPtr(): ptr_(nullptr) {}
+    explicit ExpImplPtr(Alloc::NontrivialUniquePtr<TensorImpl>&& ptr)
+            : ptr_(ptr.release()), 
+              version_(static_cast<TensorImpl*>(ptr_)->version()) {
+        increment_refcount(); 
+    }
+    ExpImplPtr(const ExpImplPtr& other)
+            : ptr_(other.ptr_), 
+              version_(static_cast<TensorImpl*>(ptr_)->version()) { 
+        increment_refcount(); 
+    }
+    ~ExpImplPtr() { decrease_refcount(); }
+
+    TensorImpl* operator->(void) const { return static_cast<TensorImpl*>(ptr_); }
+    const TensorImpl& operator*(void) const { return *static_cast<TensorImpl*>(ptr_); }
+    operator bool() const { return ptr_ != nullptr; }
+
+    template<typename GradImplType>
+    void invoke_backward(const ExpImpl<GradImplType>& grad) {
+        TensorImpl* ptr = static_cast<TensorImpl*>(ptr_);
+        if(ptr->requires_grad_) {
+            CHECK_EQUAL(version_, ptr->version(),
+                "Leaf variable has been moved into the graph interior");
+            ptr->backward(grad);
+        }
+    }
+
+    void invoke_backward(void) {
+        TensorImpl* ptr = static_cast<TensorImpl*>(ptr_);
+        if(ptr->requires_grad_) {
+            CHECK_EQUAL(version_, ptr->version(),
+                "Leaf variable has been moved into the graph interior");
+            ptr->backward();
+        }
+    }
+private:
+    void increment_refcount() { ++ptr_->refcount_; }
+
+    void decrease_refcount() {
+        --ptr_->refcount_;
+        if(ptr_->refcount_ == 0)
+            delete_handler(static_cast<void*>(ptr_));
+    }
+
+    ExpImpl<TensorImpl>* ptr_;
+    index_t version_;
+    Alloc::nontrivial_delete_handler<TensorImpl> delete_handler;
 };
 
 
 // member template function definition
 template<typename ImplType> 
 TensorImpl& TensorImpl::operator=(const ImplType& exp_impl) {
-    CHECK_TRUE(is_contiguous(), "operator= is only supported for contiguous Tensor.");
     CHECK_EXP_BROADCAST(*this, exp_impl);
-    return __assign(exp_impl);
+    storage_.increment_version();
+    if(is_contiguous())
+        return __assign(exp_impl);
+    else    
+        return __assign_uncontiguous(exp_impl);
 }
 
 template<typename ImplType>
 TensorImpl& TensorImpl::operator+=(const ImplType& exp_impl) {
-    CHECK_TRUE(is_contiguous(), "operator+= is only supported for contiguous Tensor.");
     CHECK_EXP_BROADCAST(*this, exp_impl);
-    return __inplacement_add(exp_impl);
+    storage_.increment_version();
+    if(is_contiguous())
+        return __inplacement_add(exp_impl);
+    else
+        return __inplacement_add_uncontiguous(exp_impl);
 }
 
 template<typename ImplType>
@@ -125,6 +224,73 @@ TensorImpl& TensorImpl::__inplacement_add(const ImplType& exp_impl) {
     return *this;
 }
 
-}  // namespace st
+template<typename ImplType>
+TensorImpl& TensorImpl::__assign_uncontiguous(const ImplType& exp_impl) {
+    IndexArray inds(ndim());
+    IndexArray cur(ndim());
+    index_t idx = 0;
+    cur.memset(0);
 
+    while(true) {
+        if(idx == ndim()) {
+            index_t offset = 0;
+            for(index_t i = 0; i < inds.size(); ++i)
+                offset += stride_[i] * inds[i];
+            storage_[offset] = exp_impl.eval(inds);
+        } else {
+            while(idx < ndim() && cur[idx] == size(idx)) {
+                cur[idx] = 0;
+                --idx;
+            }
+            if(idx > ndim()) break;
+
+            inds[idx] = cur[idx];
+            ++cur[idx];
+            ++idx;
+        }
+    }
+    return *this;
+}
+
+template<typename ImplType>
+TensorImpl& TensorImpl::__inplacement_add_uncontiguous(const ImplType& exp_impl) {
+    IndexArray inds(ndim());
+    IndexArray cur(ndim());
+    index_t idx = 0;
+    cur.memset(0);
+
+    while(true) {
+        if(idx == ndim()) {
+            index_t offset = 0;
+            for(index_t i = 0; i < inds.size(); ++i)
+                offset += stride_[i] * inds[i];
+            storage_[offset] += exp_impl.eval(inds);
+        } else {
+            while(idx < ndim() && cur[idx] == size(idx)) {
+                cur[idx] = 0;
+                --idx;
+            }
+            if(idx > ndim()) break;
+
+            inds[idx] = cur[idx];
+            ++cur[idx];
+            ++idx;
+        }
+    }
+    return *this;
+}
+
+template<typename ImplType>
+void TensorImpl::backward(const ExpImpl<ImplType>& grad) {
+    gradmeta_ptr_->grad_ += grad;
+    if(gradcount() == 0)
+        gradmeta_ptr_->invoke_backward();
+}
+
+void TensorImpl::backward(void) {
+    if(gradcount() == 0)
+        gradmeta_ptr_->invoke_backward();
+}
+
+}  // namespace st
 #endif

@@ -59,6 +59,8 @@ public:
     template<typename ImplType> Tensor& operator=(const Exp<ImplType>& exp);
     template<typename ImplType> Tensor& operator+=(const Exp<ImplType>& exp);
 
+    void backward(void);
+
     // friend function
     friend std::ostream& operator<<(std::ostream& out, const Tensor& t);
 };
