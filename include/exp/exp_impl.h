@@ -23,9 +23,12 @@ template<typename T> using OperandImplPtr = ExpImplPtr<T>;
 template<typename Op, typename OIType> class UnaryExpImpl;
 template<typename Op, typename LhsImplType, typename RhsImplType> class BinaryExpImpl;
 
+// Non-template base class to implement dynamic polymorphism in tensor/grad_meta.h.
+struct __ExpImpl {};
+struct __ExpImplPtr {};
 
 template<typename ImplType>
-class ExpImpl {
+class ExpImpl : public __ExpImpl {
 public:
     index_t refcount(void) const { return refcount_; }
     index_t gradcount(void) const { return gradcount_; }
@@ -36,11 +39,13 @@ private:
 };
 
 template<typename ImplType> 
-class ExpImplPtr {
+class ExpImplPtr : public __ExpImplPtr {
 public:
     ExpImplPtr() : ptr_(nullptr) {}
     explicit ExpImplPtr(Alloc::NontrivialUniquePtr<ImplType>&& ptr)
             : ptr_(ptr.release()) { increment_refcount(); }
+    explicit ExpImplPtr(const ImplType& impl)
+            : ptr_(const_cast<ImplType*>(&impl)) { increment_refcount(); }
     ExpImplPtr(const ExpImplPtr& other)
             : ptr_(other.ptr_) { increment_refcount(); }
     ~ExpImplPtr() { decrease_refcount(); }

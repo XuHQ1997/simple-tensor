@@ -3,6 +3,7 @@
 #include <iostream>
 
 #include "tensor/tensor_impl.h"
+#include "tensor/grad_meta.h"
 #include "utils/exception.h"
 #include "utils/allocator.h"
 
@@ -15,8 +16,11 @@ TensorImpl::TensorImpl(const Storage& storage,
         : storage_(storage),
           shape_(shape),
           stride_(stride),
-          requires_grad_(requires_grad_),
-          gradmeta_ptr_(nullptr) {}
+          requires_grad_(requires_grad),
+          gradmeta_ptr_(nullptr) {
+    if(requires_grad_)
+        gradmeta_ptr_ = Alloc::unique_construct<AutoGradMeta>(shape_);
+}
 
 TensorImpl::TensorImpl(const Storage& storage, const Shape& shape, bool requires_grad) 
         : storage_(storage), 
@@ -27,6 +31,8 @@ TensorImpl::TensorImpl(const Storage& storage, const Shape& shape, bool requires
     // if shape_[i] == 1, set stride_[i] = 0. For broadcasting operatoion.
     for(int i = 0; i < stride_.size(); ++i)
         stride_[i] = shape_[i] == 1 ? 0 : shape_.subsize(i + 1);
+    if(requires_grad_)
+        gradmeta_ptr_ = Alloc::unique_construct<AutoGradMeta>(shape_);
 }
 
 TensorImpl::TensorImpl(const Shape& shape, bool requires_grad)
@@ -43,7 +49,10 @@ TensorImpl::TensorImpl(Storage&& storage,
           shape_(std::move(shape)),
           stride_(std::move(stride)),
           requires_grad_(requires_grad),
-          gradmeta_ptr_(nullptr) {}
+          gradmeta_ptr_(nullptr) {
+    if(requires_grad_)
+        gradmeta_ptr_ = Alloc::unique_construct<AutoGradMeta>(shape_);
+}
 
 TensorImpl& TensorImpl::operator=(const TensorImpl& other) {
     CHECK_EXP_BROADCAST(*this, other);

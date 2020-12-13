@@ -12,6 +12,7 @@
 
 namespace st {
 
+// foward declaration
 struct AutoGradMeta;
 
 class TensorImpl : public ExpImpl<TensorImpl> {
@@ -77,7 +78,6 @@ private:
     template<typename ImplType> 
     TensorImpl& __inplacement_add_uncontiguous(const ImplType& exp_impl);
     
-
     template<typename ImplType> void backward(const ExpImpl<ImplType>& grad);
     void backward(void);
 
@@ -88,32 +88,6 @@ private:
     bool requires_grad_;
     Alloc::NontrivialUniquePtr<AutoGradMeta> gradmeta_ptr_;
 };
-}  // namespace st
-
-
-namespace st {
-// The AutoGradMeta can't be implemented as static polymorphism like ExpImpl.
-// We can only use virtual function here. Because TensorImpl hold a pointer of
-// AutoGradMeta, and the pointer doesn't depend on any template parameters.
-struct AutoGradMeta {
-    TensorImpl grad_;
-    bool from_view_;
-    // If a TensorImpl is constructed by slice(), transpose() or view(),
-    // its next_exp_ would be another TensorImpl. The following template 
-    // specializations can make sure this.
-    //
-    // And the two TensorImpls share the same grad_'s storage. So just invoke 
-    // the backward but do not pass grad.
-    void invoke_backward(void) {
-        
-    }
-};
-
-
-}  // namespace st
-
-
-namespace st {
 
 // Template specialization for ExpImplPtr
 template<> 
@@ -124,6 +98,11 @@ public:
             : ptr_(ptr.release()), 
               version_(static_cast<TensorImpl*>(ptr_)->version()) {
         increment_refcount(); 
+    }
+    explicit ExpImplPtr(const TensorImpl& impl)
+            : ptr_(const_cast<TensorImpl*>(&impl)),
+              version_(static_cast<TensorImpl*>(ptr_)->version()) {
+        increment_refcount();
     }
     ExpImplPtr(const ExpImplPtr& other)
             : ptr_(other.ptr_), 
@@ -167,7 +146,12 @@ private:
     index_t version_;
     Alloc::nontrivial_delete_handler<TensorImpl> delete_handler;
 };
+}  // namespace st
 
+
+#include "tensor/grad_meta.h"
+
+namespace st {
 
 // member template function definition
 template<typename ImplType> 
