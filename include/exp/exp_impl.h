@@ -55,7 +55,7 @@ public:
     explicit operator bool() const { return ptr_ != nullptr; }
 
     template<typename GradImplType>
-    void invoke_backward(const ExpImpl<GradImplType>& grad) {
+    void invoke_backward(const GradImplType& grad) {
         static_cast<ImplType*>(ptr_)->backward(grad);
     }
 private:
@@ -351,7 +351,8 @@ private:
     op::MaxPool2d::Wsize out_size_;
 };
 
-template<> class UnaryExpImpl<op::Constant, data_t>
+template<>
+class UnaryExpImpl<op::Constant, data_t>
         : public ExpImpl<UnaryExpImpl<op::Constant, data_t>> {
 public:
     UnaryExpImpl(data_t value) : value_(value) {}

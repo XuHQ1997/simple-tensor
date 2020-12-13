@@ -159,7 +159,6 @@ void test_Tensor() {
             }
 }
 
-// TODO: test assignment for uncontiguous Tensor.
 void test_basic_operation() {
     using namespace st;
 
@@ -244,12 +243,27 @@ void test_basic_operation() {
                     CHECK_FLOAT_EQUAL(value1, value2, "check 4");
                 }
     
-    Tensor t11 = t1 + op::constant(1);
-    for(index_t i = 0; i < 3; ++i)
-        for(index_t j = 0; j < 4; ++j) {
+    Tensor t11 = t1.transpose(0, 1) + op::constant(1);
+    for(index_t i = 0; i < 4; ++i)
+        for(index_t j = 0; j < 3; ++j) {
             data_t value1 = t11[{i, j}];
-            data_t value2 = t1[{i, j}] + 1;
+            data_t value2 = t1[{j, i}] + 1;
             CHECK_EQUAL(value1, value2, "check5");
+        }
+
+    // assignment of uncontiguous tensor
+    auto t12 = t1.transpose(0, 1);
+    Tensor t13 = t2.transpose(0, 1);
+    Tensor t14(data, t12.size());
+    t12 = t14;
+    t13 = op::constant(0);
+    t13 += t12;
+    for(index_t i = 0; i < 4; ++i)
+        for(index_t j = 0; j < 3; ++j) {
+            data_t value1 = t12[{i, j}];
+            data_t value2 = t13[{i, j}];
+            data_t value3 = t14[{i, j}];
+            CHECK_TRUE(value1 == value2 && value1 == value3, "check6");
         }
 }
 
@@ -438,7 +452,7 @@ int main() {
     cout << "\033[33mtest tensor...\33[0m" << endl;
     test_Tensor();
 
-    cout << "\033[33mtest operation...\033[0m" << endl;
+    cout << "\033[33mtest basic operation...\033[0m" << endl;
     test_basic_operation();
 
     cout << "\033[33mtest matrix operation...\033[0m" << endl;
@@ -450,7 +464,7 @@ int main() {
     cout << "\033[33mtest conv operation...\033[0m" << endl;
     test_conv_operation();
 
-    cout << "\033[33mtest conv operation...\033[0m" << endl;
+    cout << "\033[33mtest view backward...\033[0m" << endl;
     test_view_backward();
 
     cout << "\033[33mcheck all memory is deallocated...\033[0m" << endl;

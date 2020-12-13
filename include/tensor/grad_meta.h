@@ -13,41 +13,15 @@ namespace st {
 // ExpImplPtr<ImplType>. 
 // 
 // We need dynamic polymorphism, virtual function, to implement this.
-struct AutoGradMeta {
-public:
-
-    struct GradFn {
-        virtual void operator()(void) = 0;
-        virtual void operator()(TensorImpl& grad) = 0;
-    };
-
-    template<typename... Args>
-    AutoGradMeta(Args... args) 
-            : grad_(std::forward(args...), /*requires_grad=*/false) {}
-
-    TensorImpl& grad() { return grad_; }
-    bool from_view() { return from_view_; }
-    GradFn& grad_fn() { return *grad_fn_ptr_; }
-
-    void zero_grad(void) { grad_ = op::constant(0); }
-
-    void set_from_view(bool from_view) { from_view_ = from_view_; }
-
-    template<typename ImplType>
-    void set_grad_fn(const ImplType& impl) {
-        grad_fn_ptr_ = Alloc::unique_construct<__GradFn>(impl);
-    }
-
-private:
-    TensorImpl grad_;
-    bool from_view_;
-    Alloc::NontrivialUniquePtr<GradFn> grad_fn_ptr_;
+struct GradFn {
+    virtual void operator()(void) = 0;
+    virtual void operator()(TensorImpl& grad) = 0;
 };
 
 template<typename ImplType> 
-class __GradFn: public AutoGradMeta::GradFn {
+class __GradFn: public GradFn {
 public:
-    __GradFn(const Impl& impl) : next_exp_(impl) {}
+    __GradFn(const ImplType& impl) : next_exp_(impl) {}
 
     void operator()(void) override { 
         THROW_ERROR("Need grad when invoke backward method of a expression.");
@@ -60,7 +34,7 @@ private:
     ExpImplPtr<ImplType> next_exp_;
 };
 
-template<> struct __GradFn<TensorImpl>: public AutoGradMeta::GradFn {
+template<> struct __GradFn<TensorImpl>: public GradFn {
 public:
     __GradFn(const TensorImpl& impl) : next_exp_(impl) {}
 
@@ -75,5 +49,23 @@ private:
     ExpImplPtr<TensorImpl> next_exp_;
 };
 
+
+struct AutoGradMeta {
+
+    TensorImpl grad_;
+    bool from_view_;
+    Alloc::NontrivialUniquePtr<GradFn> grad_fn_ptr_;
+
+    template<typename... Args>
+    AutoGradMeta(Args... args) 
+            : grad_(std::forward<Args...>(args...), /*requires_grad=*/false) {}
+
+    void set_from_view(bool from_view) { from_view_ = from_view_; }
+
+    template<typename ImplType>
+    void set_grad_fn(const ImplType& impl) {
+        grad_fn_ptr_ = Alloc::unique_construct<__GradFn>(impl);
+    }
+};
 }  // namespace st
 #endif

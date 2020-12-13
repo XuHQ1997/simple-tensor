@@ -19,7 +19,6 @@ template<typename ImplType> class Exp;
 
 namespace op {
 
-namespace {
 template<typename Op, typename OIType>  // OIType = OperandImplType
 Exp<UnaryExpImpl<Op, OIType>> 
 unary_operation_function(const Exp<OIType>& operand) {
@@ -39,7 +38,6 @@ binary_operation_function(const Exp<LhsImplType>& lhs, const Exp<RhsImplType>& r
         )
     );
 }
-}  // namespace
 
 // function for basic operation
 template<typename OIType>
@@ -105,8 +103,8 @@ sigmoid(const Exp<OIType>& operand) {
 template<typename LhsImplType, typename RhsImplType>
 Exp<BinaryExpImpl<MatrixMul, LhsImplType, RhsImplType>>
 matrix_mul(const Exp<LhsImplType>& lhs, const Exp<RhsImplType>& rhs) {
-    auto lhs_impl = lhs.impl();
-    auto rhs_impl = rhs.impl();
+    auto& lhs_impl = lhs.impl();
+    auto& rhs_impl = rhs.impl();
     CHECK_TRUE(lhs_impl.ndim() == 2 && rhs_impl.ndim() == 2, 
         "Matrices expected, got %dD and %dD Tensor。", 
         lhs_impl.ndim(), rhs_impl.ndim());
@@ -119,8 +117,8 @@ matrix_mul(const Exp<LhsImplType>& lhs, const Exp<RhsImplType>& rhs) {
 template<typename LhsImplType, typename RhsImplType>
 Exp<BinaryExpImpl<BatchMatrixMul, LhsImplType, RhsImplType>>
 batch_matrix_mul(const Exp<LhsImplType>& lhs, const Exp<RhsImplType>& rhs) {
-    auto lhs_impl = lhs.impl();
-    auto rhs_impl = rhs.impl();
+    auto& lhs_impl = lhs.impl();
+    auto& rhs_impl = rhs.impl();
     CHECK_TRUE(lhs_impl.ndim() == 3 && rhs_impl.ndim() == 3, 
         "Baths of Matrices expected, got %dD and %dD Tensor。", 
         lhs_impl.ndim(), rhs_impl.ndim());
@@ -249,7 +247,7 @@ max_pool2d(const Exp<OIType>& operand, const MaxPool2d::Wsize& kernel_size,
     );
 }
 
-Exp<UnaryExpImpl<Constant, data_t>>
+inline Exp<UnaryExpImpl<Constant, data_t>>
 constant(data_t value) {
     return Exp<UnaryExpImpl<Constant, data_t>>(
         Alloc::unique_construct<UnaryExpImpl<Constant, data_t>>(value)

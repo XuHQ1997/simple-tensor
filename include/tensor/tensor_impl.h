@@ -78,7 +78,7 @@ private:
     template<typename ImplType> 
     TensorImpl& __inplacement_add_uncontiguous(const ImplType& exp_impl);
     
-    template<typename ImplType> void backward(const ExpImpl<ImplType>& grad);
+    template<typename ImplType> void backward(const ImplType& grad);
     void backward(void);
 
     Storage storage_;
@@ -115,8 +115,8 @@ public:
     const TensorImpl& operator*(void) const { return *static_cast<TensorImpl*>(ptr_); }
     operator bool() const { return ptr_ != nullptr; }
 
-    template<typename GradImplType>
-    void invoke_backward(const ExpImpl<GradImplType>& grad) {
+    template<typename ImplType>
+    void invoke_backward(const ImplType& grad) {
         TensorImpl* ptr = static_cast<TensorImpl*>(ptr_);
         if(ptr->requires_grad_) {
             CHECK_EQUAL(version_, ptr->version(),
@@ -217,6 +217,7 @@ TensorImpl& TensorImpl::__assign_uncontiguous(const ImplType& exp_impl) {
 
     while(true) {
         if(idx == ndim()) {
+            --idx;
             index_t offset = 0;
             for(index_t i = 0; i < inds.size(); ++i)
                 offset += stride_[i] * inds[i];
@@ -245,6 +246,7 @@ TensorImpl& TensorImpl::__inplacement_add_uncontiguous(const ImplType& exp_impl)
 
     while(true) {
         if(idx == ndim()) {
+            --idx;
             index_t offset = 0;
             for(index_t i = 0; i < inds.size(); ++i)
                 offset += stride_[i] * inds[i];
@@ -265,15 +267,19 @@ TensorImpl& TensorImpl::__inplacement_add_uncontiguous(const ImplType& exp_impl)
 }
 
 template<typename ImplType>
-void TensorImpl::backward(const ExpImpl<ImplType>& grad) {
+void TensorImpl::backward(const ImplType& grad) {
     gradmeta_ptr_->grad_ += grad;
-    if(gradcount() == 0)
-        gradmeta_ptr_->invoke_backward();
+    if(gradcount() == 0) {
+        auto& grad_fn = *(gradmeta_ptr_->grad_fn_ptr_);
+        grad_fn(gradmeta_ptr_->grad_);
+    }
 }
 
-void TensorImpl::backward(void) {
-    if(gradcount() == 0)
-        gradmeta_ptr_->invoke_backward();
+inline void TensorImpl::backward(void) {
+    if(gradcount() == 0) {
+        auto& grad_fn = *(gradmeta_ptr_->grad_fn_ptr_);
+        grad_fn();
+    }
 }
 
 }  // namespace st
