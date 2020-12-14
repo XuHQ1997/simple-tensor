@@ -82,6 +82,8 @@ Tensor Tensor::unsqueeze(index_t dim) const {
 void Tensor::backward(void) {
     CHECK_TRUE(impl_ptr_->requires_grad(),
         "Tensor doesn't require grad and doesn't have a grad_fn.");
+    CHECK_TRUE(ndim() == 1 && size(0) == 1,
+        "Grad can be implicitly created only for scalar outputs");
     impl_ptr_.invoke_backward(op::constant(1).impl());
 }
 

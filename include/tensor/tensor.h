@@ -65,9 +65,15 @@ public:
     friend std::ostream& operator<<(std::ostream& out, const Tensor& t);
 };
 
-template<typename ImplType> Tensor::Tensor(const Exp<ImplType>& exp)
+#include <iostream>
+template<typename ImplType> 
+Tensor::Tensor(const Exp<ImplType>& exp)
         : Exp<TensorImpl>(
             Alloc::unique_construct<TensorImpl>(exp.impl().size())) {
+    std::cout << "in constructor: " << exp.impl().ndim() << " : ";
+    auto s = exp.impl().size();
+    for(index_t i = 0; i < s.size(); ++i) std::cout << s[i] << " ";
+    std::cout << std::endl;
     impl_ptr_->operator=(exp.impl());
 }
 

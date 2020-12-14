@@ -27,7 +27,7 @@ template<typename ImplType>
 struct Exp {
 public:
     explicit Exp(Alloc::NontrivialUniquePtr<ImplType>&& ptr)
-            :impl_ptr_(std::move(ptr)) {}
+            :impl_ptr_(std::move(ptr), false) {}
     const ExpImplPtr<ImplType>& impl_ptr(void) const { return impl_ptr_; }
     const ImplType& impl(void) const { return *impl_ptr_; }
 

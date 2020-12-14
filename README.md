@@ -35,8 +35,8 @@ mkdir bin
 # 3. build
 make
 
-# 4. run
-make run
+# 4. run test
+./bin/test
 ```
 
 You can learn about How to use these code in `test.cpp` .

@@ -93,56 +93,66 @@ private:
 template<> 
 class ExpImplPtr<TensorImpl> {
 public:
-    ExpImplPtr(): ptr_(nullptr) {}
-    explicit ExpImplPtr(Alloc::NontrivialUniquePtr<TensorImpl>&& ptr)
-            : ptr_(ptr.release()), 
+    ExpImplPtr(Alloc::NontrivialUniquePtr<TensorImpl>&& ptr, bool with_grad)
+            : ptr_(ptr.release()),
+              with_grad_(with_grad && static_cast<TensorImpl*>(ptr_)->requires_grad()),
               version_(static_cast<TensorImpl*>(ptr_)->version()) {
-        increment_refcount(); 
+        increment_counters();
     }
-    explicit ExpImplPtr(const TensorImpl& impl)
+    ExpImplPtr(const TensorImpl& impl, bool with_grad)
             : ptr_(const_cast<TensorImpl*>(&impl)),
+              with_grad_(with_grad && static_cast<TensorImpl*>(ptr_)->requires_grad()),
               version_(static_cast<TensorImpl*>(ptr_)->version()) {
-        increment_refcount();
+        increment_counters();
     }
-    ExpImplPtr(const ExpImplPtr& other)
-            : ptr_(other.ptr_), 
+    ExpImplPtr(const ExpImplPtr& other, bool with_grad)
+            : ptr_(other.ptr_),
+              with_grad_(with_grad && static_cast<TensorImpl*>(ptr_)->requires_grad()),
               version_(static_cast<TensorImpl*>(ptr_)->version()) { 
-        increment_refcount(); 
+        increment_counters(); 
     }
     ~ExpImplPtr() { decrease_refcount(); }
 
     TensorImpl* operator->(void) const { return static_cast<TensorImpl*>(ptr_); }
     const TensorImpl& operator*(void) const { return *static_cast<TensorImpl*>(ptr_); }
-    operator bool() const { return ptr_ != nullptr; }
+    explicit operator bool() const { return ptr_ != nullptr; }
 
-    template<typename ImplType>
-    void invoke_backward(const ImplType& grad) {
+    template<typename GradImplType>
+    void invoke_backward(const GradImplType& grad) {
         TensorImpl* ptr = static_cast<TensorImpl*>(ptr_);
-        if(ptr->requires_grad_) {
+        if(with_grad_) {
             CHECK_EQUAL(version_, ptr->version(),
                 "Leaf variable has been moved into the graph interior");
+            -- ptr->gradcount_;
             ptr->backward(grad);
         }
     }
 
     void invoke_backward(void) {
         TensorImpl* ptr = static_cast<TensorImpl*>(ptr_);
-        if(ptr->requires_grad_) {
+        if(with_grad_) {
             CHECK_EQUAL(version_, ptr->version(),
                 "Leaf variable has been moved into the graph interior");
+            -- ptr->gradcount_;
             ptr->backward();
         }
     }
 private:
-    void increment_refcount() { ++ptr_->refcount_; }
+    void increment_counters() { 
+        ++ ptr_->refcount_; 
+        if(with_grad_)
+            ++ ptr_->gradcount_;
+    }
 
     void decrease_refcount() {
-        --ptr_->refcount_;
+        -- ptr_->refcount_;
         if(ptr_->refcount_ == 0)
             delete_handler(static_cast<void*>(ptr_));
     }
 
+
     ExpImpl<TensorImpl>* ptr_;
+    bool with_grad_;
     index_t version_;
     Alloc::nontrivial_delete_handler<TensorImpl> delete_handler;
 };

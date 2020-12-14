@@ -47,22 +47,26 @@ struct Error: public std::exception {
     if((x) > INDEX_MAX) THROW_ERROR((format), ##__VA_ARGS__)
 
 // assert macro only working for ExpImpl
-#define CHECK_EXP_SAME_SHAPE(e1, e2) do {\
-    CHECK_EQUAL((e1).ndim(), (e2).ndim(),  \
+#define CHECK_EXP_SAME_SHAPE(e1_, e2_) do { \
+    auto& e1 = (e1_); \
+    auto& e2 = (e2_); \
+    CHECK_EQUAL(e1.ndim(), e2.ndim(),  \
         "The dimension of operators, %dD and %dD , doesn't match.", \
-        (e1).ndim(), (e2).ndim()); \
-    for(index_t i = 0; i < (e1).ndim(); ++i) \
-        CHECK_EQUAL((e1).size(i), (e2).size(i), \
-            "The sizes on %d dimension, %d and %d, doesn't match.", \
-            i, (e1).size(i), (e2).size(i)); \
+        e1.ndim(), e2.ndim()); \
+    for(index_t i = 0; i < e1.ndim(); ++i) \
+        CHECK_EQUAL(e1.size(i), e2.size(i), \
+            "The sizes on %dth dimension, %d and %d, doesn't match.", \
+            i, e1.size(i), e2.size(i)); \
 } while(0)
 
-#define CHECK_EXP_BROADCAST(e1, e2) do { \
-    index_t min_dim = std::min((e1).ndim(), (e2).ndim()); \
+#define CHECK_EXP_BROADCAST(e1_, e2_) do { \
+    auto& e1 = (e1_); \
+    auto& e2 = (e2_); \
+    index_t min_dim = std::min(e1.ndim(), e2.ndim()); \
     for(index_t i = 0; i < min_dim; ++i)  \
-        CHECK_TRUE((e1).size(i) == (e2).size(i) || (e1).size(i) == 1 || (e2).size(i) == 1, \
-            "The size on %d dimension, %d and %d, can't be broadcasted.", \
-            i, (e1).size(i), (e2).size(i));  \
+        CHECK_TRUE(e1.size(i) == e2.size(i) || e1.size(i) == 1 || e2.size(i) == 1, \
+            "The size on %dth dimension, %d and %d, can't be broadcasted.", \
+            i, e1.size(i), e2.size(i));  \
 } while(0)
 
 #else  // ifndef CANCEL_CHECK

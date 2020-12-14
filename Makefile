@@ -20,9 +20,6 @@ $(BIN)/test.o: test.cpp $(all_header_files)
 
 .PHONY : clean run
 
-run:
-	./bin/test.exe
-
 clean:
 	rm $(BIN)/*.o
 	rm $(BIN)/*.exe

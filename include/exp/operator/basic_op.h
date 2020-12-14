@@ -24,6 +24,8 @@ struct BinaryBasicOperator {
     }
     template<typename LhsType, typename RhsType>
     static index_t size(index_t idx, const LhsType& lhs, const RhsType& rhs) {
+        if(idx >= lhs.ndim()) return rhs.size(idx);
+        if(idx >= rhs.ndim()) return lhs.size(idx);
         return std::max(lhs.size(idx), rhs.size(idx));
     }
 };

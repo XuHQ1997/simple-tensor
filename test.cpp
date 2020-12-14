@@ -305,12 +305,12 @@ void test_matrix_operation() {
 
 void test_numeric_operation() {
     using namespace st;
-    data_t data1[] = {0.9742, 0.8367, 0.6840, 1.0074, 1.2784, 1.2193, 
-                     1.0252, 1.1873, 1.4498, 1.2189, 0.7510, 1.3621};
+    data_t data1[] = {0.585639, 0.612628, 0.241485, 0.097616, 0.035854, 0.723054, 
+                      0.131163, 0.884268, 0.193597, 0.694748, 0.650687, 0.738797};
     Tensor t0(data1, Shape{3, 4});
-    data_t t1_expect[3][4] = {{-1.295666, -1.433150, -1.585845, -1.262473},
-                                       {-1.289772, -1.348877, -1.542909, -1.380803},
-                                       {-1.165368, -1.396256, -1.864143, -1.253019}};
+    data_t t1_expect[3][4] = {{-1.208965, -1.181976, -1.553119, -1.696988},
+                              {-1.860054, -1.172853, -1.764744, -1.011639},
+                              {-1.784239, -1.283088, -1.327148, -1.239038}};
     Tensor t1 = op::log_softmax(t0);
     for(index_t i = 0; i < 3; ++i)
         for(index_t j = 0; j < 4; ++j) {
@@ -325,9 +325,9 @@ void test_numeric_operation() {
     Tensor t2 = op::nll_loss(t1, labels_ptr);
     CHECK_EQUAL(t2.ndim(), 1, "check2");
     CHECK_EQUAL(t2.size(0), t1.size(0), "check2");
-    CHECK_FLOAT_EQUAL(t2[{0}], 1.585845, "check2");
-    CHECK_FLOAT_EQUAL(t2[{1}], 1.289772, "check2");
-    CHECK_FLOAT_EQUAL(t2[{2}], 1.253019, "check2");
+    CHECK_FLOAT_EQUAL(t2[{0}], -t1_expect[0][2], "check2");
+    CHECK_FLOAT_EQUAL(t2[{1}], -t1_expect[1][0], "check2");
+    CHECK_FLOAT_EQUAL(t2[{2}], -t1_expect[2][3], "check2");
 
     data_t data2[] = {0.096237, -0.037000,  0.028076,  0.328307,  0.122271, -0.017293,
                       0.150791,  0.421008,  0.322066, -0.321352,  0.319534, -0.424081};
@@ -476,4 +476,3 @@ int main() {
     cout << " seconds.\033[0m" << endl;
     return 0;
 }
-
