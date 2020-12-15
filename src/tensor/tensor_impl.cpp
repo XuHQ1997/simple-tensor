@@ -54,15 +54,6 @@ TensorImpl::TensorImpl(Storage&& storage,
         gradmeta_ptr_ = Alloc::unique_construct<AutoGradMeta>(shape_);
 }
 
-TensorImpl& TensorImpl::operator=(const TensorImpl& other) {
-    CHECK_EXP_BROADCAST(*this, other);
-    storage_.increment_version();
-    if(is_contiguous())
-        return __assign(other);
-    else    
-        return __assign_uncontiguous(other);
-}
-
 bool TensorImpl::is_contiguous(void) const {
     for(index_t i = 0; i < stride_.size(); i++)
         if(stride_[i] != 0 && stride_[i] != shape_.subsize(i+1))
@@ -113,6 +104,7 @@ TensorImpl::slice(index_t idx, index_t dim) const {
         idx, dim, size(dim));
     
     // new_dptr = dptr + idx * stride_[dim]
+    index_t offset = stride_[dim] * idx;
     Storage storage(storage_, stride_[dim] * idx);
     // new_shape is the same as shape_ except missing the size on #dim dimension,
     // and new_stride is similiar.
@@ -125,9 +117,18 @@ TensorImpl::slice(index_t idx, index_t dim) const {
     for(; i < stride.size(); i++)
         stride[i] = stride_[i+1];
 
-    return Alloc::unique_construct<TensorImpl>(
+    auto ret_ptr = Alloc::unique_construct<TensorImpl>(
         std::move(storage), std::move(shape), std::move(stride), false
     );
+    if(requires_grad_) {
+        ret_ptr->requires_grad_ = true;
+        ret_ptr->gradmeta_ptr_ = Alloc::unique_construct<AutoGradMeta>(
+            gradmeta_ptr_->grad_, offset
+        );
+        ret_ptr->gradmeta_ptr_->set_from_view(true);
+        ret_ptr->gradmeta_ptr_->set_grad_fn(*this);
+    }
+    return ret_ptr;
 }
 
 Alloc::NontrivialUniquePtr<TensorImpl>
@@ -143,16 +144,26 @@ TensorImpl::slice(index_t start_idx, index_t end_idx, index_t dim) const {
         end_idx, dim, size(dim));
 
     // new_dptr = dptr + start_idx * stride_[dim]
-    Storage storage(storage_, stride_[dim] * start_idx);
+    index_t offset = stride_[dim] * start_idx;
+    Storage storage(storage_, offset);
     // new_stride is the same as stride
     IndexArray stride(stride_);
     // new_shape and shape_ are only different on #dim dimension
     Shape shape(shape_);
     shape[dim] = end_idx - start_idx;
 
-    return Alloc::unique_construct<TensorImpl>(
+    auto ret_ptr =  Alloc::unique_construct<TensorImpl>(
         std::move(storage), std::move(shape), std::move(stride), false
     );
+    if(requires_grad_) {
+        ret_ptr->requires_grad_ = true;
+        ret_ptr->gradmeta_ptr_ = Alloc::unique_construct<AutoGradMeta>(
+            gradmeta_ptr_->grad_, offset
+        );
+        ret_ptr->gradmeta_ptr_->set_from_view(true);
+        ret_ptr->gradmeta_ptr_->set_grad_fn(*this);
+    }
+    return ret_ptr;
 }
 
 Alloc::NontrivialUniquePtr<TensorImpl>
@@ -166,8 +177,6 @@ TensorImpl::transpose(index_t dim1, index_t dim2) const {
     
     // new_dptr = dptr
     // Exchange the value in shape_ and stride_ on #dim1 and #dim2
-    Storage storage(storage_);
-    
     Shape shape(shape_);
     shape[dim1] = shape_[dim2];
     shape[dim2] = shape_[dim1];
@@ -176,9 +185,18 @@ TensorImpl::transpose(index_t dim1, index_t dim2) const {
     stride[dim1] = stride_[dim2];
     stride[dim2] = stride_[dim1];
 
-    return Alloc::unique_construct<TensorImpl>(
-        std::move(storage), std::move(shape), std::move(stride), false
+    auto ret_ptr = Alloc::unique_construct<TensorImpl>(
+        Storage(storage_), std::move(shape), std::move(stride), false
     );
+    if(requires_grad_) {
+        ret_ptr->requires_grad_ = true;
+        ret_ptr->gradmeta_ptr_ = Alloc::unique_construct<AutoGradMeta>(
+            gradmeta_ptr_->grad_, 0
+        );
+        ret_ptr->gradmeta_ptr_->set_from_view(true);
+        ret_ptr->gradmeta_ptr_->set_grad_fn(*this);
+    }
+    return ret_ptr;
 }
 
 Alloc::NontrivialUniquePtr<TensorImpl>
@@ -195,9 +213,18 @@ TensorImpl::permute(std::initializer_list<index_t> dims) const {
         stride[i] = stride_[idx];
         ++i;
     }
-    return Alloc::unique_construct<TensorImpl>(
-        Storage(storage_), Shape(std::move(shape)), std::move(stride)
+    auto ret_ptr = Alloc::unique_construct<TensorImpl>(
+        Storage(storage_), std::move(shape), std::move(stride), false
     );
+    if(requires_grad_) {
+        ret_ptr->requires_grad_ = true;
+        ret_ptr->gradmeta_ptr_ = Alloc::unique_construct<AutoGradMeta>(
+            gradmeta_ptr_->grad_, 0
+        );
+        ret_ptr->gradmeta_ptr_->set_from_view(true);
+        ret_ptr->gradmeta_ptr_->set_grad_fn(*this);
+    }
+    return ret_ptr;
 }
 
 Alloc::NontrivialUniquePtr<TensorImpl>
@@ -209,9 +236,18 @@ TensorImpl::view(const Shape& shape) const {
         shape.dsize(), shape_.dsize());
     // new_dptr = dptr
     // Just use new shape and adjust stride.
-    return Alloc::unique_construct<TensorImpl>(
+    auto ret_ptr = Alloc::unique_construct<TensorImpl>(
         storage_, shape, false
     );
+    if(requires_grad_) {
+        ret_ptr->requires_grad_ = true;
+        ret_ptr->gradmeta_ptr_ = Alloc::unique_construct<AutoGradMeta>(
+            gradmeta_ptr_->grad_, 0
+        );
+        ret_ptr->gradmeta_ptr_->set_from_view(true);
+        ret_ptr->gradmeta_ptr_->set_grad_fn(*this);
+    }
+    return ret_ptr;
 }
 
 Alloc::NontrivialUniquePtr<TensorImpl>
@@ -247,6 +283,26 @@ TensorImpl::unsqueeze(index_t dim) const {
     return view(Shape(unsqueeze_dims, new_ndim));
 }
 
+Alloc::NontrivialUniquePtr<TensorImpl>
+TensorImpl::grad(void) const {
+    CHECK_TRUE(requires_grad_, "The tensor don't require grad.");
+    return Alloc::unique_construct<TensorImpl>(
+        gradmeta_ptr_->grad_, shape_, stride_, false
+    );
+}
+
+data_t TensorImpl::eval(IndexArray& inds) const {
+    index_t offset = 0;
+    for(int i = 0; i < ndim(); ++i) {
+        offset += inds[i] * stride_[i];
+    }
+    return storage_[offset];
+}
+
+data_t TensorImpl::eval(index_t idx) const {
+    return storage_[idx];
+}
+
 std::ostream& operator<<(std::ostream& out, const TensorImpl& src) {
     TensorImpl t(src.size());
     t = src;
@@ -279,18 +335,6 @@ std::ostream& operator<<(std::ostream& out, const TensorImpl& src) {
 
     out.setf(flags);
     return out;
-}
-
-data_t TensorImpl::eval(IndexArray& inds) const {
-    index_t offset = 0;
-    for(int i = 0; i < ndim(); ++i) {
-        offset += inds[i] * stride_[i];
-    }
-    return storage_[offset];
-}
-
-data_t TensorImpl::eval(index_t idx) const {
-    return storage_[idx];
 }
 
 }  // namespace st

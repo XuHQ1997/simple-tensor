@@ -15,20 +15,48 @@ namespace st {
 // We need dynamic polymorphism to implement this.
 struct GradFn {
     virtual void operator()(void) = 0;
-    virtual void operator()(TensorImpl& grad) = 0;
+    virtual void operator()(const Storage& grad, const Shape& shape,
+                            const IndexArray& stride) = 0;
+    virtual ~GradFn() = default;
+
+    struct TensorGradExpImpl: public ExpImpl<TensorGradExpImpl> {
+        const Storage& storage_;
+        const Shape& shape_;
+        const IndexArray& stride_;
+
+        TensorGradExpImpl(const Storage& storage, const Shape& shape, 
+                          const IndexArray& stride)
+                : storage_(storage),
+                  shape_(shape),
+                  stride_(stride) {}
+
+        data_t eval(IndexArray& inds) const {
+            index_t offset = 0;
+            for(int i = 0; i < shape_.ndim(); ++i)
+                offset += inds[i] * stride_[i];
+            return storage_[offset];
+        }
+
+        data_t eval(index_t idx) const {
+            return storage_[idx];
+        }
+    };
 };
 
 template<typename ImplType> 
 class __GradFn: public GradFn {
 public:
     __GradFn(const ImplType& impl) : next_exp_(impl, false) {}
+    ~__GradFn() = default;
 
     void operator()(void) override { 
         THROW_ERROR("Need grad when invoke backward method of a expression.");
     }
 
-    void operator()(TensorImpl& grad) override { 
-        next_exp_.invoke_backward(grad);
+    void operator()(const Storage& grad, const Shape& shape, 
+                    const IndexArray& stride) override {
+    //     TensorGradExpImpl grad_exp_impl(grad, shape, stride);
+    //     next_exp_.invoke_backward(grad_exp_impl);
     }
 private:
     ExpImplPtr<ImplType> next_exp_;
@@ -38,13 +66,16 @@ template<>
 struct __GradFn<TensorImpl>: public GradFn {
 public:
     __GradFn(const TensorImpl& impl) : next_exp_(impl, false) {}
+    ~__GradFn() = default;
 
-    virtual void operator()(void) override {
+    void operator()(void) override {
         next_exp_.invoke_backward();
     }
 
-    virtual void operator()(TensorImpl& grad) override {
-        next_exp_.invoke_backward(grad);
+    void operator()(const Storage& grad, const Shape& shape,
+                    const IndexArray& stride) override {
+        TensorGradExpImpl grad_exp_impl(grad, shape, stride);
+        next_exp_.invoke_backward(grad_exp_impl);
     }
 private:
     ExpImplPtr<TensorImpl> next_exp_;
@@ -53,21 +84,26 @@ private:
 
 struct AutoGradMeta {
 
-    TensorImpl grad_;
+    Storage grad_;
     bool from_view_;
-    Alloc::NontrivialUniquePtr<GradFn> grad_fn_ptr_;
+    std::shared_ptr<GradFn> grad_fn_ptr_;
 
-    template<typename... Args>
-    AutoGradMeta(Args... args) 
-            : grad_(std::forward<Args...>(args...), /*requires_grad=*/false),
+    AutoGradMeta(const Shape& tensor_shape)
+            : grad_(tensor_shape.dsize(), 0),
               from_view_(false),
-              grad_fn_ptr_() {}
+              grad_fn_ptr_(nullptr) {}
+    
+    AutoGradMeta(const Storage& grad, index_t offset)
+            : grad_(grad, offset),
+              from_view_(false),
+              grad_fn_ptr_(nullptr) {}
 
     void set_from_view(bool from_view) { from_view_ = from_view_; }
 
     template<typename ImplType>
     void set_grad_fn(const ImplType& impl) {
-        grad_fn_ptr_ = Alloc::unique_construct<__GradFn>(impl);
+        auto ptr = Alloc::shared_construct<__GradFn<ImplType>>(impl);
+        grad_fn_ptr_ = ptr;
     }
 };
 }  // namespace st

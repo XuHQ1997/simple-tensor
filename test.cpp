@@ -433,11 +433,38 @@ void test_conv_operation() {
         }
 }
 
-// TODO: 
-// 1. test tensor version control
-// 2. TensorImpl::operator+= blocks backward.
 void test_view_backward() {
+    using namespace st;
 
+    data_t data1[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
+    Tensor t0(data1, Shape{3, 4}, true);
+
+    Tensor t1 = t0.view({2, 2, 3});
+    Tensor t2 = t1.slice(/*start_idx=*/1, /*end_idx=*/3, /*dim=*/2);
+    Tensor t3 = t2.slice(1, /*dim=*/1);
+    t3.backward();
+    data_t t0_grad_expect1[][4] = {{0, 0, 0, 0}, {1, 1, 0, 0}, {0, 0, 1, 1}};
+    auto&& grad1 = t0.grad();
+    for(index_t i = 0; i < 3; ++i)
+        for(index_t j = 0; j < 4; ++j) {
+            data_t value1 = grad1[{i, j}];
+            data_t value2 = t0_grad_expect1[i][j];
+            CHECK_FLOAT_EQUAL(value1, value2, "check1");
+        }
+
+    Tensor t4 = t0.view({3, 2, 2});
+    Tensor t5 = t4.transpose(0, 1);
+    Tensor t6 = t5.slice(0, 1, /*dim=*/0);
+    Tensor t7 = t6.permute({1, 2, 0});
+    t7.backward();
+    data_t t0_grad_expect2[][4] = {{1, 1, 0, 0}, {2, 2, 0, 0}, {1, 1, 1, 1}};
+    auto&& grad2 = t0.grad();
+    for(index_t i = 0; i < 3; ++i)
+        for(index_t j = 0; j < 4; ++j) {
+            data_t value1 = grad2[{i, j}];
+            data_t value2 = t0_grad_expect2[i][j];
+            CHECK_FLOAT_EQUAL(value1, value2, "check2");
+        }
 }
 
 int main() {

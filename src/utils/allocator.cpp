@@ -1,6 +1,8 @@
 #include "utils/allocator.h"
 #include "utils/exception.h"
 
+#include <iostream>
+
 namespace st {
 inline unsigned int round_up(int x) { return x == 1 ? 1 : 1 << (64 - __builtin_clz(x-1)); }
 
@@ -31,7 +33,7 @@ void Alloc::deallocate(void* ptr, index_t size) {
     self().cache_.emplace(size, ptr);
 }
 
-bool Alloc::all_clear() { 
+bool Alloc::all_clear() {
     return allocate_memory_size == deallocate_memory_size;
 }
 

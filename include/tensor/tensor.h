@@ -43,7 +43,8 @@ public:
     index_t version(void) const;
     
     bool is_contiguous(void) const;
-    
+    Tensor grad(void) const;
+
     data_t& operator[](std::initializer_list<index_t> ids);
     data_t operator[](std::initializer_list<index_t> ids) const;
     data_t item(void) const;
@@ -70,10 +71,6 @@ template<typename ImplType>
 Tensor::Tensor(const Exp<ImplType>& exp)
         : Exp<TensorImpl>(
             Alloc::unique_construct<TensorImpl>(exp.impl().size())) {
-    std::cout << "in constructor: " << exp.impl().ndim() << " : ";
-    auto s = exp.impl().size();
-    for(index_t i = 0; i < s.size(); ++i) std::cout << s[i] << " ";
-    std::cout << std::endl;
     impl_ptr_->operator=(exp.impl());
 }
 

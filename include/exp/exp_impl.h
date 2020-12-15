@@ -61,10 +61,11 @@ public:
 
     template<typename GradImplType>
     void invoke_backward(const GradImplType& grad) {
-        if(with_grad_) {
-            -- ptr_->gradcount_;
-            static_cast<ImplType*>(ptr_)->backward(grad);
-        }
+        // auto ptr = static_cast<ImplType*>(ptr_)->requires_grad();
+        // if(ptr->requires_grad()) {
+        //     -- ptr_->gradcount_;
+        //     ptr->backward(grad);
+        // }
     }
 private:
     void increment_counters() { 
