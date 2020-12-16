@@ -23,6 +23,20 @@ struct NLLLoss {
         IndexArray operand_inds{idx, label};
         return -operand.eval(operand_inds);
     }
+
+    struct Grad {
+        template<typename GradType, typename OperandType>
+        static data_t map(IndexArray& inds, const GradType& grad, 
+                          const OperandType& operand, 
+                          index_t* batch_label) {
+            index_t idx = inds[0];
+            index_t cls = inds[1];
+            if(cls == batch_label[idx])
+                return grad.eval(inds);
+            else
+                return 0;
+        }
+    };
 };
 
 }  // namespace op

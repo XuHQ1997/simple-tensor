@@ -31,10 +31,18 @@ struct BinaryBasicOperator {
 };
 
 struct Minus: public UnaryBasicOperator {
-    template<typename IndexType, typename OperandType>
-    static data_t map(IndexType& inds, const OperandType& operand) {
+    template<typename OperandType>
+    static data_t map(IndexArray& inds, const OperandType& operand) {
         return -operand.eval(inds);
     }
+
+    struct Grad {
+        template<typename GradType, typename OperandType>
+        static data_t map(IndexArray& inds, const GradType& grad, 
+                          const OperandType& oeprand) {
+            return -grad.eval(inds);
+        }
+    };
 };
 
 struct Add : public BinaryBasicOperator {
@@ -42,6 +50,22 @@ struct Add : public BinaryBasicOperator {
     static data_t map(IndexArray& inds, const LhsType& lhs, const RhsType& rhs) {
         return lhs.eval(inds) + rhs.eval(inds);
     }
+
+    struct LhsGrad {
+        template<typename GradType, typename LhsType, typename RhsType>
+        static data_t map(IndexArray& inds, const GradType& grad,
+                          const LhsType& lhs, const RhsType& rhs) {
+            return grad.eval(inds);
+        }
+    };
+
+    struct RhsGrad {
+        template<typename GradType, typename LhsType, typename RhsType>
+        static data_t map(IndexArray& inds, const GradType& grad,
+                          const LhsType& lhs, const RhsType& rhs) {
+            return grad.eval(inds);
+        }
+    };
 };
 
 struct Mul : public BinaryBasicOperator {
@@ -49,6 +73,22 @@ struct Mul : public BinaryBasicOperator {
     static data_t map(IndexArray& inds, const LhsType& lhs, const RhsType& rhs) {
         return lhs.eval(inds) * rhs.eval(inds);
     }
+
+    struct LhsGrad {
+        template<typename GradType, typename LhsType, typename RhsType>
+        static data_t map(IndexArray& inds, const GradType& grad,
+                          const LhsType& lhs, const RhsType& rhs) {
+            return grad.eval(inds) * rhs.eval(inds);
+        }
+    };
+
+    struct RhsGrad {
+        template<typename GradType, typename LhsType, typename RhsType>
+        static data_t map(IndexArray& inds, const GradType& grad,
+                          const LhsType& lhs, const RhsType& rhs) {
+            return grad.eval(inds) * lhs.eval(inds);
+        }
+    };
 };
 
 struct Sub : public BinaryBasicOperator{
@@ -56,6 +96,22 @@ struct Sub : public BinaryBasicOperator{
     static data_t map(IndexArray& inds, const LhsType& lhs, const RhsType& rhs) {
         return lhs.eval(inds) - rhs.eval(inds);
     }
+
+    struct LhsGrad {
+        template<typename GradType, typename LhsType, typename RhsType>
+        static data_t map(IndexArray& inds, const GradType& grad,
+                          const LhsType& lhs, const RhsType& rhs) {
+            return grad.eval(inds);
+        }
+    };
+
+    struct RhsGrad {
+        template<typename GradType, typename LhsType, typename RhsType>
+        static data_t map(IndexArray& inds, const GradType& grad,
+                          const LhsType& lhs, const RhsType& rhs) {
+            return -grad.eval(inds);
+        }
+    };
 };
 
 struct ReLU: public UnaryBasicOperator {
@@ -63,13 +119,30 @@ struct ReLU: public UnaryBasicOperator {
     static data_t map(IndexArray& inds, const OperandType& operand) {
         return std::max(operand.eval(inds), 0.);
     }
+
+    struct Grad {
+        template<typename GradType, typename OperandType>
+        static data_t map(IndexArray& inds, const GradType& grad, 
+                          const OperandType& operand) {
+            return operand.eval(inds) > 0 ? grad.eval(inds) : 0;
+        }
+    };
 };
 
 struct Sigmoid: public UnaryBasicOperator {
-        template<typename OperandType>
+    template<typename OperandType>
     static data_t map(IndexArray& inds, const OperandType& operand) {
         return 1 / (1+std::exp(-operand.eval(inds)));
     }
+
+    struct Grad {
+        template<typename GradType, typename OperandType>
+        static data_t map(IndexArray& inds, const GradType& grad, 
+                          const OperandType& operand) {
+            data_t value = Sigmoid::map(inds, operand);
+            return value * (1 - value);
+        }
+    };
 };
 
 }  // namespace op

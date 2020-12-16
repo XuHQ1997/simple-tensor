@@ -4,6 +4,7 @@
 #include <algorithm>
 
 #include "utils/base_config.h"
+#include "utils/exception.h"
 
 namespace st {
 namespace op {
@@ -40,6 +41,16 @@ struct MeanReduce : public ReduceOperator {
         value /= reduce_size;
         return value;
     }
+
+    struct Grad {    
+        template<typename GradType, typename OperandType>
+        static data_t map(IndexArray& inds, const GradType& grad, 
+                          const OperandType& operand, 
+                          index_t reduce_dim) {
+            index_t reduce_size = operand.size(reduce_dim);
+            return grad.eval(inds) / reduce_size;
+        }
+    };
 };
 
 struct Argmax : public ReduceOperator {
@@ -64,6 +75,16 @@ struct Argmax : public ReduceOperator {
         }
         return idx;
     }
+
+    struct Grad {
+        template<typename GradType, typename OperandType>
+        static data_t map(IndexArray& inds, const GradType& grad, 
+                          const OperandType& operand, 
+                          index_t reduce_dim) {
+            THROW_ERROR("NotImplementError");
+            return 0;
+        }
+    };
 };
 
 }  // namespace op

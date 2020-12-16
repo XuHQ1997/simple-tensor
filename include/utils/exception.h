@@ -23,7 +23,7 @@ struct Error: public std::exception {
 #define ERROR_LOCATION __FILE__, __func__, __LINE__
 #define THROW_ERROR(format, ...)	do {	\
     std::sprintf(err::Error::msg_, (format), ##__VA_ARGS__);    \
-    throw err::Error(ERROR_LOCATION);	\
+    throw ::st::err::Error(ERROR_LOCATION);	\
 } while(0)
 
 #ifndef CANCEL_CHECK

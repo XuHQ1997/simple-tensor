@@ -24,6 +24,15 @@ struct MatrixTranspose {
         std::swap(inds[0], inds[1]);
         return operand.eval(inds);
     }
+
+    struct Grad {
+        template<typename GradType, typename OperandType>
+        static data_t map(IndexArray& inds, const GradType& grad, 
+                          const OperandType& operand) {
+            std::swap(inds[0], inds[1]);
+            return grad.eval(inds);
+        }
+    };
 };
 
 struct MatrixMul {
@@ -50,6 +59,42 @@ struct MatrixMul {
         }
         return value;
     }
+
+    struct LhsGrad {
+        template<typename GradType, typename LhsType, typename RhsType>
+        static data_t map(IndexArray& inds, const GradType& grad, 
+                          const LhsType& lhs, const RhsType& rhs) {
+            index_t hsize = rhs.size(1);
+            IndexArray grad_inds({inds[0], 0});
+            IndexArray rhs_inds({inds[1], 0});
+
+            data_t value = 0;
+            for(index_t i = 0; i < hsize; ++i) {
+                grad_inds[1] = i;
+                rhs_inds[1] = i;
+                value += grad.eval(grad_inds) * rhs.eval(rhs_inds);
+            }
+            return value;
+        }
+    };
+
+    struct RhsGrad {
+        template<typename GradType, typename LhsType, typename RhsType>
+        static data_t map(IndexArray& inds, const GradType& grad, 
+                          const LhsType& lhs, const RhsType& rhs) {
+            index_t hsize = lhs.size(0);
+            IndexArray lhs_inds({0, inds[0]});
+            IndexArray grad_inds({0, inds[1]});
+
+            data_t value = 0;
+            for(index_t i = 0; i < hsize; ++i) {
+                lhs_inds[0] = i;
+                grad_inds[0] = i;
+                value += lhs.eval(lhs_inds) * grad.eval(grad_inds);
+            }
+            return value;
+        }
+    };
 };
 
 struct BatchMatrixTranspose {
@@ -71,6 +116,15 @@ struct BatchMatrixTranspose {
         std::swap(inds[1], inds[2]);
         return operand.eval(inds);
     }
+
+    struct Grad {
+        template<typename GradType, typename OperandType>
+        static data_t map(IndexArray& inds, const GradType& grad, 
+                          const OperandType& operand) {
+            std::swap(inds[1], inds[2]);
+            return grad.eval(inds);
+        }
+    };
 };
 
 struct BatchMatrixMul {
@@ -101,8 +155,44 @@ struct BatchMatrixMul {
         }
         return value;
     }
+
+    struct LhsGrad {
+        template<typename GradType, typename LhsType, typename RhsType>
+        static data_t map(IndexArray& inds, const GradType& grad, 
+                          const LhsType& lhs, const RhsType& rhs) {
+            index_t hsize = rhs.size(2);
+            IndexArray grad_inds({inds[0], inds[1], 0});
+            IndexArray rhs_inds({inds[0], inds[2], 0});
+
+            data_t value;
+            for(index_t i = 0; i < hsize; ++i) {
+                grad_inds[2] = i;
+                rhs_inds[2] = 
+                value += grad.eval(grad_inds) * rhs.eval(rhs_inds);
+            }
+            return value;
+        }
+    };
+
+    struct RhsGrad {
+        template<typename GradType, typename LhsType, typename RhsType>
+        static data_t map(IndexArray& inds, const GradType& grad,
+                          const LhsType& lhs, const RhsType& rhs) {
+            index_t hsize = lhs.size(1);
+            IndexArray lhs_inds({inds[0], 0, inds[1]});
+            IndexArray grad_inds({inds[0], 0, inds[2]});
+
+            data_t value = 0;
+            for(index_t i = 0; i < hsize; ++i) {
+                lhs_inds[1] = i;
+                grad_inds[1] = i;
+                value += lhs.eval(lhs_inds) * grad.eval(grad_inds);
+            }
+            return value;
+        }
+    };
 };
 
-}
-}
+}  // namespace op
+}  // namespace st
 #endif

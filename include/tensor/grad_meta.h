@@ -2,7 +2,7 @@
 #define TENSOR_GRAD_META_H
 
 #include "utils/exception.h"
-#include "exp/exp_impl.h"
+#include "exp/grad_impl.h"
 #include "exp/function.h"
 #include "tensor/tensor_impl.h"
 
@@ -19,13 +19,13 @@ struct GradFn {
                             const IndexArray& stride) = 0;
     virtual ~GradFn() = default;
 
-    struct TensorGradExpImpl: public ExpImpl<TensorGradExpImpl> {
+    struct TensorGradImpl: public GradImpl<TensorGradImpl> {
         const Storage& storage_;
         const Shape& shape_;
         const IndexArray& stride_;
 
-        TensorGradExpImpl(const Storage& storage, const Shape& shape, 
-                          const IndexArray& stride)
+        TensorGradImpl(const Storage& storage, const Shape& shape, 
+                       const IndexArray& stride)
                 : storage_(storage),
                   shape_(shape),
                   stride_(stride) {}
@@ -51,7 +51,7 @@ public:
 
     void operator()(const Storage& grad, const Shape& shape, 
                     const IndexArray& stride) override {
-    //     TensorGradExpImpl grad_exp_impl(grad, shape, stride);
+    //     TensorGradImpl grad_exp_impl(grad, shape, stride);
     //     next_exp_.invoke_backward(grad_exp_impl);
     }
 private:
@@ -70,7 +70,7 @@ public:
 
     void operator()(const Storage& grad, const Shape& shape,
                     const IndexArray& stride) override {
-        TensorGradExpImpl grad_exp_impl(grad, shape, stride);
+        TensorGradImpl grad_exp_impl(grad, shape, stride);
         next_exp_.invoke_backward(grad_exp_impl);
     }
 private:

@@ -1,5 +1,6 @@
 #include "tensor/tensor.h"
-#include "exp/function.h"
+#include "exp/operator/constant.h"
+#include "exp/grad_impl.h"
 
 namespace st {
 
@@ -88,7 +89,7 @@ void Tensor::backward(void) {
         "Tensor doesn't require grad and doesn't have a grad_fn.");
     // CHECK_TRUE(ndim() == 1 && size(0) == 1,
     //     "Grad can be implicitly created only for scalar outputs");
-    impl_ptr_.invoke_backward(op::constant(1).impl());
+    impl_ptr_.invoke_backward(UnaryGradImpl<op::Constant, data_t>(1));
 }
 
 // friend function

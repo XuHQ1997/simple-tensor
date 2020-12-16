@@ -2,7 +2,7 @@
 #define EXP_OPERATOR_CONSTANT_H
 
 #include "utils/base_config.h"
-
+#include "utils/exception.h"
 
 namespace st {
 namespace op {
@@ -14,6 +14,13 @@ struct Constant {
     static data_t map(IndexArray& inds, data_t value) {
         return value;
     }
+
+    struct Grad {
+        static data_t map(IndexArray& inds, data_t value) {
+            THROW_ERROR("NotImplementError");
+            return 0;
+        }
+    };
 };
 
 
