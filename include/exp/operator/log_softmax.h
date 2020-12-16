@@ -54,6 +54,35 @@ struct LogSoftmax {
             batch_max_cls[i] = max_cls;
         }
     }
+
+    struct Grad {
+        template<typename GradType, typename OperandType>
+        static data_t map(IndexArray& inds, const GradType& grad, 
+                          const OperandType& operand, data_t* batch_sum_exp,
+                          data_t* batch_max_cls) {
+            data_t x = operand.eval(inds);
+            data_t softmax = (x - batch_max_cls[inds[0]]) / batch_sum_exp[inds[0]];
+
+            index_t n_cls = operand.size(1);
+            IndexArray grad_inds(inds);
+
+            data_t total_grad = 0;
+            index_t i = 0;
+            for(; i < inds[1]; ++i) {
+                grad_inds[1] = i;
+                total_grad -= grad.eval(grad_inds);
+            }
+            for(++i; i < n_cls; ++i) {
+                grad_inds[1] = i;
+                total_grad -= grad.eval(grad_inds);
+            }
+            total_grad *= softmax;
+
+            grad_inds[1] = inds[1];
+            total_grad += (1 - softmax) * grad.eval(grad_inds);
+            return total_grad;
+        }
+    };
 };
 
 
