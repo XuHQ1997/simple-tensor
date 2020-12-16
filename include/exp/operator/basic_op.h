@@ -38,36 +38,36 @@ struct Minus: public UnaryBasicOperator {
 };
 
 struct Add : public BinaryBasicOperator {
-    template<typename IndexType, typename LhsType, typename RhsType>
-    static data_t map(IndexType& inds, const LhsType& lhs, const RhsType& rhs) {
+    template<typename LhsType, typename RhsType>
+    static data_t map(IndexArray& inds, const LhsType& lhs, const RhsType& rhs) {
         return lhs.eval(inds) + rhs.eval(inds);
     }
 };
 
 struct Mul : public BinaryBasicOperator {
-    template<typename IndexType, typename LhsType, typename RhsType>
-    static data_t map(IndexType& inds, const LhsType& lhs, const RhsType& rhs) {
+    template<typename LhsType, typename RhsType>
+    static data_t map(IndexArray& inds, const LhsType& lhs, const RhsType& rhs) {
         return lhs.eval(inds) * rhs.eval(inds);
     }
 };
 
 struct Sub : public BinaryBasicOperator{
-    template<typename IndexType, typename LhsType, typename RhsType>
-    static data_t map(IndexType& inds, const LhsType& lhs, const RhsType& rhs) {
+    template<typename LhsType, typename RhsType>
+    static data_t map(IndexArray& inds, const LhsType& lhs, const RhsType& rhs) {
         return lhs.eval(inds) - rhs.eval(inds);
     }
 };
 
 struct ReLU: public UnaryBasicOperator {
-    template<typename IndexType, typename OperandType>
-    static data_t map(IndexType& inds, const OperandType& operand) {
+    template<typename OperandType>
+    static data_t map(IndexArray& inds, const OperandType& operand) {
         return std::max(operand.eval(inds), 0.);
     }
 };
 
 struct Sigmoid: public UnaryBasicOperator {
-        template<typename IndexType, typename OperandType>
-    static data_t map(IndexType& inds, const OperandType& operand) {
+        template<typename OperandType>
+    static data_t map(IndexArray& inds, const OperandType& operand) {
         return 1 / (1+std::exp(-operand.eval(inds)));
     }
 };

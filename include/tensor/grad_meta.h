@@ -36,10 +36,6 @@ struct GradFn {
                 offset += inds[i] * stride_[i];
             return storage_[offset];
         }
-
-        data_t eval(index_t idx) const {
-            return storage_[idx];
-        }
     };
 };
 

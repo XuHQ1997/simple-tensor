@@ -116,7 +116,7 @@ private:
 };
 
 template<typename Op, typename LhsImplType, typename RhsImplType>
-class BinaryExpImpl 
+class BinaryExpImpl
         : public ExpImpl<BinaryExpImpl<Op, LhsImplType, RhsImplType>> {
 public:
     BinaryExpImpl(const OperandImplPtr<LhsImplType>& lhs_ptr,
