@@ -23,7 +23,7 @@ struct ReduceOperator {
     }
 };
 
-struct MeanReduce : public ReduceOperator {
+struct Mean : public ReduceOperator {
     template<typename OperandType>
     static data_t map(IndexArray& inds, const OperandType& operand, 
                       index_t reduce_dim) {
@@ -61,7 +61,7 @@ struct Argmax : public ReduceOperator {
         index_t reduce_size = operand.size(reduce_dim);
         index_t i = 0;
         for(; i < reduce_dim; ++i)  operand_inds[i] = inds[i];
-        for(++i; i < inds.size() + 1; ++i) operand_inds[i] = inds[i-1];
+        for(++i; i < operand_inds.size(); ++i) operand_inds[i] = inds[i-1];
 
         data_t value, max_value = DATA_MIN;
         index_t idx;
@@ -74,6 +74,36 @@ struct Argmax : public ReduceOperator {
             }
         }
         return idx;
+    }
+
+    struct Grad {
+        template<typename GradType, typename OperandType>
+        static data_t map(IndexArray& inds, const GradType& grad, 
+                          const OperandType& operand, 
+                          index_t reduce_dim) {
+            THROW_ERROR("NotImplementError for class Grad in class Argmax.");
+            return 0;
+        }
+    };
+};
+
+struct Max : public ReduceOperator {
+    template<typename OperandType>
+    static data_t map(IndexArray& inds, const OperandType& operand, 
+                      index_t reduce_dim) {
+        IndexArray operand_inds(inds.size() + 1);
+        index_t reduce_size = operand.size(reduce_dim);
+        index_t i = 0;
+        for(; i < reduce_dim; ++i)  operand_inds[i] = inds[i];
+        for(++i; i < inds.size() + 1; ++i) operand_inds[i] = inds[i-1];
+
+        data_t value, max_value = DATA_MIN;
+        for(i = 0; i < reduce_size; ++i) {
+            operand_inds[reduce_dim] = i;
+            value = operand.eval(operand_inds);
+            max_value = std::max(max_value, value);
+        }
+        return max_value;
     }
 
     struct Grad {
@@ -101,7 +131,7 @@ struct Argmax : public ReduceOperator {
 
             IndexArray grad_inds(inds.size() - 1);
             for(i = 0; i < reduce_dim; ++i) grad_inds[i] = inds[i];
-            for(++i; i < reduce_size; ++i) grad_inds[i-1] = inds[i];
+            for(++i; i < inds.size(); ++i) grad_inds[i-1] = inds[i];
             return grad.eval(grad_inds);
         }
     };

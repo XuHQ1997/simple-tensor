@@ -58,6 +58,56 @@ struct Img2col {
 
         return operand.eval(operand_inds);
     }
+
+    struct Grad {
+        template<typename GradType, typename OperandType>
+        static data_t map(IndexArray& inds, const GradType& grad, 
+                          const OperandType& operand, const Wsize& kernel_size, 
+                          const Wsize& stride_size, const Wsize& padding_size, 
+                          const Wsize& out_size) {
+            // operand size: (b, c, h, w)
+            // grad size: (c*kh*kw, oh*ow*b)
+            index_t n_batch = operand.size(0);
+            index_t img_h = operand.size(2);
+            index_t img_w = operand.size(3);
+            index_t kh_idx, kw_idx;  // location in a patch
+            index_t ph_idx, pw_idx;  // location of the left top point of a patch
+            IndexArray grad_inds(2);
+            data_t total_grad = 0;
+
+            index_t c_step = kernel_size.first * kernel_size.second;
+            index_t kh_step = kernel_size.second;
+            index_t oh_step = out_size.second * n_batch;
+            index_t ow_step = n_batch;
+
+            for(kh_idx = 0; kh_idx < kernel_size.first; ++kh_idx) {
+                for(kw_idx = 0; kw_idx < kernel_size.second; ++kw_idx) {
+                    // index_t is unsiged int. Can't substract here.
+                    ph_idx = inds[2] /* - kh_idx */ + padding_size.first;
+                    pw_idx = inds[3] /* - kw_idx */ + padding_size.second;
+
+                    if(ph_idx < kh_idx || pw_idx < kw_idx) 
+                        continue;
+                    ph_idx -= kh_idx;
+                    pw_idx -= kw_idx;
+                    if(ph_idx + kernel_size.first - padding_size.first > img_h 
+                    || pw_idx + kernel_size.second - padding_size.second > img_w
+                    || ph_idx % stride_size.first 
+                    || pw_idx % stride_size.second)
+                        continue;
+
+                    grad_inds[0] = inds[1] * c_step
+                                 + kh_idx * kh_step
+                                 + kw_idx;
+                    grad_inds[1] = ph_idx / stride_size.first * oh_step
+                                 + pw_idx / stride_size.second * ow_step
+                                 + inds[0];
+                    total_grad += grad.eval(grad_inds);
+                }
+            }
+            return grad;
+        }
+    };
 };
 
 struct MaxPool2d {

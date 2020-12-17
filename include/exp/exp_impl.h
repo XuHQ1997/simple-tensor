@@ -8,6 +8,7 @@
 #include "utils/base_config.h"
 #include "utils/array.h"
 
+#include "exp/grad_impl.h"
 #include "exp/operator/log_softmax.h"
 #include "exp/operator/nll_loss.h"
 #include "exp/operator/reduce_op.h"
@@ -61,11 +62,11 @@ public:
 
     template<typename GradImplType>
     void invoke_backward(const GradImplType& grad) {
-        // auto ptr = static_cast<ImplType*>(ptr_)->requires_grad();
-        // if(ptr->requires_grad()) {
-        //     -- ptr_->gradcount_;
-        //     ptr->backward(grad);
-        // }
+        auto ptr = static_cast<ImplType*>(ptr_)->requires_grad();
+        if(ptr->requires_grad()) {
+            -- ptr_->gradcount_;
+            ptr->backward(grad);
+        }
     }
 private:
     void increment_counters() { 
@@ -111,6 +112,11 @@ public:
 
     bool requires_grad(void) const { return operand_ptr_->requires_grad(); }
 
+    template<typename GIType>
+    void backward(const GIType& grad) {
+        UnaryGradImpl<typename Op::Grad, GIType, OIType> out_grad(grad, *operand_ptr_);
+        operand_ptr_.invoke_backward(out_grad);
+    }
 private:
     OperandImplPtr<OIType> operand_ptr_;
 };
@@ -141,6 +147,18 @@ public:
     bool requires_grad(void) const { 
         return lhs_ptr_->requires_grad() || rhs_ptr_->requires_grad(); 
     }
+
+    template<typename GIType>
+    void backward(const GIType& grad) {
+        BinaryGradImpl<typename Op::LhsGrad, GIType, LhsImplType, RhsImplType> 
+        lhs_grad(grad, *lhs_ptr_, *rhs_ptr_);
+        lhs_ptr_.invoke_backward(lhs_grad);
+        
+        BinaryGradImpl<typename Op::RhsGrad, GIType, LhsImplType, RhsImplType> 
+        rhs_grad(grad, *lhs_ptr_, *rhs_ptr_);
+        rhs_ptr_.invoke_backward(rhs_grad);
+    }
+
 private:
     OperandImplPtr<LhsImplType> lhs_ptr_;
     OperandImplPtr<RhsImplType> rhs_ptr_;
@@ -190,6 +208,13 @@ public:
 
     bool requires_grad(void) const { return operand_ptr_->requires_grad(); }
 
+    template<typename GIType>
+    void backward(const GIType& grad) {
+        UnaryGradImpl<typename op::LogSoftmax::Grad, GIType, OIType> out_grad(
+            grad, *operand_ptr_, batch_sum_exp_, batch_max_cls_
+        );
+        operand_ptr_.invoke_backward(out_grad);
+    }
 private:
     OperandImplPtr<OIType> operand_ptr_;
     index_t n_batch_;
@@ -198,16 +223,16 @@ private:
 };
 
 template<typename OIType>
-class UnaryExpImpl<op::MeanReduce, OIType>
-        : public ExpImpl<UnaryExpImpl<op::MeanReduce, OIType>> {
+class UnaryExpImpl<op::Mean, OIType>
+        : public ExpImpl<UnaryExpImpl<op::Mean, OIType>> {
 public:
     explicit UnaryExpImpl(const OperandImplPtr<OIType>& ptr, index_t reduce_dim)
             : operand_ptr_(ptr, true),
               reduce_dim_(reduce_dim) {}
 
-    index_t ndim(void) const { return op::MeanReduce::ndim(*operand_ptr_); }
+    index_t ndim(void) const { return op::Mean::ndim(*operand_ptr_); }
     index_t size(index_t idx) const { 
-        return op::MeanReduce::size(idx, *operand_ptr_, reduce_dim_); 
+        return op::Mean::size(idx, *operand_ptr_, reduce_dim_); 
     }
     IndexArray size(void) const {
         IndexArray shape(ndim());
@@ -218,10 +243,57 @@ public:
 
 
     data_t eval(IndexArray& inds) const {
-        return op::MeanReduce::map(inds, *operand_ptr_, reduce_dim_);
+        return op::Mean::map(inds, *operand_ptr_, reduce_dim_);
     }
 
     bool requires_grad(void) const { return operand_ptr_->requires_grad(); }
+
+    template<typename GIType>
+    void backward(const GIType& grad) {
+        UnaryGradImpl<typename op::Mean::Grad, OIType, GIType> out_grad(
+            grad, *operand_ptr_, reduce_dim_
+        );
+        operand_ptr_.invoke_backward(out_grad);
+    }
+
+private:
+    OperandImplPtr<OIType> operand_ptr_;
+    index_t reduce_dim_;    
+};
+
+template<typename OIType>
+class UnaryExpImpl<op::Max, OIType>
+        : public ExpImpl<UnaryExpImpl<op::Max, OIType>> {
+public:
+    explicit UnaryExpImpl(const OperandImplPtr<OIType>& ptr, index_t reduce_dim)
+            : operand_ptr_(ptr, true),
+              reduce_dim_(reduce_dim) {}
+
+    index_t ndim(void) const { return op::Max::ndim(*operand_ptr_); }
+    index_t size(index_t idx) const { 
+        return op::Max::size(idx, *operand_ptr_, reduce_dim_); 
+    }
+    IndexArray size(void) const {
+        IndexArray shape(ndim());
+        for(index_t i = 0; i < shape.size(); ++i)
+            shape[i] = size(i);
+        return shape;
+    }
+
+
+    data_t eval(IndexArray& inds) const {
+        return op::Max::map(inds, *operand_ptr_, reduce_dim_);
+    }
+
+    bool requires_grad(void) const { return operand_ptr_->requires_grad(); }
+
+    template<typename GIType>
+    void backward(const GIType& grad) {
+        UnaryGradImpl<typename op::Max::Grad, OIType, GIType> out_grad(
+            grad, *operand_ptr_, reduce_dim_
+        );
+        operand_ptr_.invoke_backward(out_grad);
+    }
 
 private:
     OperandImplPtr<OIType> operand_ptr_;
@@ -253,6 +325,11 @@ public:
 
     bool requires_grad(void) const { return operand_ptr_->requires_grad(); }
 
+    template<typename GIType>
+    void backward(const GIType& grad) const {
+        THROW_ERROR("NotImplementError for backward of Argmax");
+    }
+
 private:
     OperandImplPtr<OIType> operand_ptr_;
     index_t reduce_dim_;    
@@ -282,6 +359,13 @@ public:
 
     bool requires_grad(void) const { return operand_ptr_->requires_grad(); }
 
+    template<typename GIType>
+    void backward(const GIType& grad) {
+        UnaryGradImpl<typename op::NLLLoss::Grad, GIType, OIType> out_grad(
+            grad, *operand_ptr_, batch_label_
+        );
+        operand_ptr_.invoke_backward(out_grad);
+    }
 private:
     OperandImplPtr<OIType> operand_ptr_;
     std::shared_ptr<index_t> batch_label_;  
@@ -329,6 +413,14 @@ public:
 
     bool requires_grad(void) const { return operand_ptr_->requires_grad(); }
 
+    template<typename GIType>
+    void backward(const GIType& grad) {
+        UnaryGradImpl<typename op::Img2col::Grad, GIType, OIType> out_grad(
+            grad, *operand_ptr_, kernel_size_, stride_size_,
+            padding_size_, out_size_
+        );
+        operand_ptr_.invoke_backward(out_grad);
+    }
 private:
     OperandImplPtr<OIType> operand_ptr_;
     op::Img2col::Wsize kernel_size_;
@@ -376,6 +468,10 @@ public:
 
     bool requires_grad(void) const { return operand_ptr_->requires_grad(); }
 
+    template<typename GIType>
+    void backward(const GIType& grad) {
+        THROW_ERROR("NotImplmentError in backward of MaxPool2d");
+    }
 private:
     OperandImplPtr<OIType> operand_ptr_;
     op::MaxPool2d::Wsize kernel_size_;
@@ -404,6 +500,11 @@ public:
     }
 
     bool requires_grad(void) const { return false; }
+
+    template<typename GIType>
+    void backward(const GIType& grad) {
+        THROW_ERROR("NotImplementError in backward of Constant");
+    }
 
 private:
     data_t value_;

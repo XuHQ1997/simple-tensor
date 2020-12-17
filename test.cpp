@@ -356,6 +356,14 @@ void test_numeric_operation() {
             index_t value2 = t6_expect[i][j];
             CHECK_EQUAL(value1, value2, "check6");
         }
+    
+    Tensor t7 = op::max(t3, 1);
+    for(index_t i = 0; i < 2; ++i)
+        for(index_t j = 0; j < 3; ++j) {
+            data_t value1 = t7[{i, j}];
+            data_t value2 = t3[{i, t6_expect[i][j], j}];
+            CHECK_FLOAT_EQUAL(value1, value2, "check7");
+        }
 }
 
 void test_conv_operation() {
@@ -468,7 +476,6 @@ void test_view_backward() {
 }
 
 int main() {
-    using namespace st;
     using namespace std::chrono;
 
     steady_clock::time_point start_tp = steady_clock::now();
@@ -495,7 +502,7 @@ int main() {
     test_view_backward();
 
     cout << "\033[33mcheck all memory is deallocated...\033[0m" << endl;
-    CHECK_TRUE(Alloc::all_clear(), "check memory all clear");
+    CHECK_TRUE(st::Alloc::all_clear(), "check memory all clear");
 
     steady_clock::time_point end_tp = steady_clock::now();
     duration<double> time_span = duration_cast<duration<double>>(end_tp - start_tp);

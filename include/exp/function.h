@@ -146,13 +146,26 @@ log_softmax(const Exp<OIType>& operand) {
 
 // function for reduce operator
 template<typename OIType>
-Exp<UnaryExpImpl<MeanReduce, OIType>>
+Exp<UnaryExpImpl<Mean, OIType>>
 mean(const Exp<OIType>& operand, index_t dim) {
     CHECK_IN_RANGE(dim, 0, operand.impl().ndim(), 
         "Dimension out of range (expected to be in range of [0, %d), but got %d)",
         operand.impl().ndim(), dim);
-    return Exp<UnaryExpImpl<MeanReduce, OIType>>(
-        Alloc::unique_construct<UnaryExpImpl<MeanReduce, OIType>>(
+    return Exp<UnaryExpImpl<Mean, OIType>>(
+        Alloc::unique_construct<UnaryExpImpl<Mean, OIType>>(
+            operand.impl_ptr(), dim
+        )
+    );
+}
+
+template<typename OIType>
+Exp<UnaryExpImpl<Max, OIType>>
+max(const Exp<OIType>& operand, index_t dim) {
+    CHECK_IN_RANGE(dim, 0, operand.impl().ndim(), 
+        "Dimension out of range (expected to be in range of [0, %d), but got %d)",
+        operand.impl().ndim(), dim);
+    return Exp<UnaryExpImpl<Max, OIType>>(
+        Alloc::unique_construct<UnaryExpImpl<Max, OIType>>(
             operand.impl_ptr(), dim
         )
     );
