@@ -105,7 +105,7 @@ struct Img2col {
                     total_grad += grad.eval(grad_inds);
                 }
             }
-            return grad;
+            return total_grad;
         }
     };
 };

@@ -66,13 +66,10 @@ public:
     friend std::ostream& operator<<(std::ostream& out, const Tensor& t);
 };
 
-#include <iostream>
 template<typename ImplType> 
 Tensor::Tensor(const Exp<ImplType>& exp)
-        : Exp<TensorImpl>(
-            Alloc::unique_construct<TensorImpl>(exp.impl().size())) {
-    impl_ptr_->operator=(exp.impl());
-}
+        : Exp<TensorImpl>(Alloc::unique_construct<TensorImpl>(exp.impl()))
+    {}
 
 template<typename ImplType> Tensor& Tensor::operator=(const Exp<ImplType>& exp) {
     impl_ptr_->operator=(exp.impl());

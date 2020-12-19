@@ -28,11 +28,11 @@ struct NLLLoss {
         template<typename GradType, typename OperandType>
         static data_t map(IndexArray& inds, const GradType& grad, 
                           const OperandType& operand, 
-                          index_t* batch_label) {
+                          const index_t* batch_label) {
             index_t idx = inds[0];
             index_t cls = inds[1];
             if(cls == batch_label[idx])
-                return grad.eval(inds);
+                return -grad.eval(inds);
             else
                 return 0;
         }

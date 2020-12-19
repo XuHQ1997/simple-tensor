@@ -51,8 +51,8 @@ public:
 
     void operator()(const Storage& grad, const Shape& shape, 
                     const IndexArray& stride) override {
-    //     TensorGradImpl grad_exp_impl(grad, shape, stride);
-    //     next_exp_.invoke_backward(grad_exp_impl);
+        TensorGradImpl grad_exp_impl(grad, shape, stride);
+        next_exp_.invoke_backward(grad_exp_impl);
     }
 private:
     ExpImplPtr<ImplType> next_exp_;
@@ -94,7 +94,7 @@ struct AutoGradMeta {
               from_view_(false),
               grad_fn_ptr_(nullptr) {}
 
-    void set_from_view(bool from_view) { from_view_ = from_view_; }
+    void set_from_view(bool from_view) { from_view_ = from_view; }
 
     template<typename ImplType>
     void set_grad_fn(const ImplType& impl) {

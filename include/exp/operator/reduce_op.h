@@ -48,7 +48,11 @@ struct Mean : public ReduceOperator {
                           const OperandType& operand, 
                           index_t reduce_dim) {
             index_t reduce_size = operand.size(reduce_dim);
-            return grad.eval(inds) / reduce_size;
+            IndexArray grad_inds(inds.size() - 1);
+            index_t i = 0;
+            for(; i < reduce_dim; ++i) grad_inds[i] = inds[i];
+            for(++i; i < inds.size(); ++i) grad_inds[i-1] = inds[i];
+            return grad.eval(grad_inds) / reduce_size;
         }
     };
 };
@@ -98,8 +102,9 @@ struct Max : public ReduceOperator {
         for(++i; i < inds.size() + 1; ++i) operand_inds[i] = inds[i-1];
 
         data_t value, max_value = DATA_MIN;
-        for(i = 0; i < reduce_size; ++i) {
-            operand_inds[reduce_dim] = i;
+        for(operand_inds[reduce_dim] = 0; 
+                operand_inds[reduce_dim] < reduce_size; 
+                ++operand_inds[reduce_dim]) {
             value = operand.eval(operand_inds);
             max_value = std::max(max_value, value);
         }
@@ -116,21 +121,23 @@ struct Max : public ReduceOperator {
             data_t key_value = operand.eval(inds);
             data_t value = DATA_MIN;
 
+            for(inds[reduce_dim] = 0; 
+                    inds[reduce_dim] < key_idx 
+                    && operand.eval(inds) < key_value; 
+                    ++inds[reduce_dim]) 
+                ;
+            if(inds[reduce_dim] != key_idx) return 0;
+
+            for(++inds[reduce_dim]; 
+                    inds[reduce_dim] < reduce_size 
+                    && operand.eval(inds) < key_value; 
+                    ++inds[reduce_dim])
+                ;
+            if(inds[reduce_dim] != reduce_size) return 0;
+
             index_t i = 0;
-            for(; i < key_idx && value < key_value; ++i) {
-                inds[reduce_dim] = i;
-                value = operand.eval(inds);
-            }
-            if(i != key_idx) return 0;
-
-            for(++i; i < reduce_size && value < key_value; ++i) {
-                inds[reduce_dim] = i;
-                value = operand.eval(inds);
-            }
-            if(i != reduce_size) return 0;
-
             IndexArray grad_inds(inds.size() - 1);
-            for(i = 0; i < reduce_dim; ++i) grad_inds[i] = inds[i];
+            for(; i < reduce_dim; ++i) grad_inds[i] = inds[i];
             for(++i; i < inds.size(); ++i) grad_inds[i-1] = inds[i];
             return grad.eval(grad_inds);
         }

@@ -62,9 +62,10 @@ public:
 
     template<typename GradImplType>
     void invoke_backward(const GradImplType& grad) {
-        auto ptr = static_cast<ImplType*>(ptr_)->requires_grad();
+        auto ptr = static_cast<ImplType*>(ptr_);
         if(ptr->requires_grad()) {
-            -- ptr_->gradcount_;
+            if(with_grad_)
+                -- ptr_->gradcount_;
             ptr->backward(grad);
         }
     }
@@ -114,7 +115,11 @@ public:
 
     template<typename GIType>
     void backward(const GIType& grad) {
-        UnaryGradImpl<typename Op::Grad, GIType, OIType> out_grad(grad, *operand_ptr_);
+        CHECK_EQUAL(this->gradcount(), 0, "Reused ExpImpl can't be backward.");
+
+        UnaryGradImpl<typename Op::Grad, GIType, OIType> out_grad(
+            grad, *operand_ptr_
+        );
         operand_ptr_.invoke_backward(out_grad);
     }
 private:
@@ -150,6 +155,26 @@ public:
 
     template<typename GIType>
     void backward(const GIType& grad) {
+        CHECK_EQUAL(this->gradcount(), 0, "Reused ExpImpl can't be backward.");
+        index_t lhs_ndim = lhs_ptr_->ndim();
+        index_t rhs_ndim = rhs_ptr_->ndim();
+        CHECK_EQUAL(lhs_ndim, rhs_ndim,
+            "Backward for broadcasting operation is not supported.");
+        index_t i = 0;
+        for(i = 0; i < lhs_ndim && lhs_ptr_->size(i) == rhs_ptr_->size(i); ++i)
+            ;
+        if(i != lhs_ndim) {
+            if(lhs_ndim == 2)  // matrix mul
+                CHECK_EQUAL(lhs_ptr_->size(1), rhs_ptr_->size(0),
+                    "Backward for broadcasting operation is not supported.");
+            else if(lhs_ndim == 3 && i > 0)  // batch matrix mul
+                CHECK_EQUAL(lhs_ptr_->size(2), rhs_ptr_->size(1),
+                    "Backward for broadcasting operation is not supported.");
+            else
+                CHECK_TRUE(false, 
+                    "Backward for broadcasting operation is not supported.");
+        }
+
         BinaryGradImpl<typename Op::LhsGrad, GIType, LhsImplType, RhsImplType> 
         lhs_grad(grad, *lhs_ptr_, *rhs_ptr_);
         lhs_ptr_.invoke_backward(lhs_grad);
@@ -183,10 +208,10 @@ public:
             : operand_ptr_(ptr, true),
               n_batch_(operand_ptr_->size(0)),
               batch_sum_exp_(
-                  Alloc::shared_allocate<data_t>(
+                  Alloc::unique_allocate<data_t>(
                       sizeof(data_t) * operand_ptr_->size(0))),
               batch_max_cls_(
-                  Alloc::shared_allocate<data_t>(
+                  Alloc::unique_allocate<data_t>(
                       sizeof(data_t) * operand_ptr_->size(0))) {
         op::LogSoftmax::precompute(*operand_ptr_, batch_sum_exp_.get(), 
                                    batch_max_cls_.get());
@@ -210,16 +235,18 @@ public:
 
     template<typename GIType>
     void backward(const GIType& grad) {
+        CHECK_EQUAL(this->gradcount(), 0, "Reused ExpImpl can't be backward.");
+
         UnaryGradImpl<typename op::LogSoftmax::Grad, GIType, OIType> out_grad(
-            grad, *operand_ptr_, batch_sum_exp_, batch_max_cls_
+            grad, *operand_ptr_, batch_sum_exp_.get(), batch_max_cls_.get()
         );
         operand_ptr_.invoke_backward(out_grad);
     }
 private:
     OperandImplPtr<OIType> operand_ptr_;
     index_t n_batch_;
-    std::shared_ptr<data_t> batch_sum_exp_;
-    std::shared_ptr<data_t> batch_max_cls_;
+    Alloc::TrivialUniquePtr<data_t> batch_sum_exp_;
+    Alloc::TrivialUniquePtr<data_t> batch_max_cls_;
 };
 
 template<typename OIType>
@@ -250,7 +277,9 @@ public:
 
     template<typename GIType>
     void backward(const GIType& grad) {
-        UnaryGradImpl<typename op::Mean::Grad, OIType, GIType> out_grad(
+        CHECK_EQUAL(this->gradcount(), 0, "Reused ExpImpl can't be backward.");
+
+        UnaryGradImpl<typename op::Mean::Grad, GIType, OIType> out_grad(
             grad, *operand_ptr_, reduce_dim_
         );
         operand_ptr_.invoke_backward(out_grad);
@@ -289,7 +318,9 @@ public:
 
     template<typename GIType>
     void backward(const GIType& grad) {
-        UnaryGradImpl<typename op::Max::Grad, OIType, GIType> out_grad(
+        CHECK_EQUAL(this->gradcount(), 0, "Reused ExpImpl can't be backward.");
+
+        UnaryGradImpl<typename op::Max::Grad, GIType, OIType> out_grad(
             grad, *operand_ptr_, reduce_dim_
         );
         operand_ptr_.invoke_backward(out_grad);
@@ -361,8 +392,10 @@ public:
 
     template<typename GIType>
     void backward(const GIType& grad) {
+        CHECK_EQUAL(this->gradcount(), 0, "Reused ExpImpl can't be backward.");
+
         UnaryGradImpl<typename op::NLLLoss::Grad, GIType, OIType> out_grad(
-            grad, *operand_ptr_, batch_label_
+            grad, *operand_ptr_, batch_label_.get()
         );
         operand_ptr_.invoke_backward(out_grad);
     }
@@ -415,6 +448,8 @@ public:
 
     template<typename GIType>
     void backward(const GIType& grad) {
+        CHECK_EQUAL(this->gradcount(), 0, "Reused ExpImpl can't be backward.");
+
         UnaryGradImpl<typename op::Img2col::Grad, GIType, OIType> out_grad(
             grad, *operand_ptr_, kernel_size_, stride_size_,
             padding_size_, out_size_

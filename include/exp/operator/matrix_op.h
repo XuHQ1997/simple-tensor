@@ -167,7 +167,7 @@ struct BatchMatrixMul {
             data_t value;
             for(index_t i = 0; i < hsize; ++i) {
                 grad_inds[2] = i;
-                rhs_inds[2] = 
+                rhs_inds[2] = i;
                 value += grad.eval(grad_inds) * rhs.eval(rhs_inds);
             }
             return value;

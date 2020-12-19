@@ -441,7 +441,7 @@ void test_conv_operation() {
         }
 }
 
-void test_view_backward() {
+void test_tensor_backward() {
     using namespace st;
 
     data_t data1[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
@@ -475,6 +475,105 @@ void test_view_backward() {
         }
 }
 
+void test_basic_operator_backward() {
+    using namespace st;
+
+    data_t data[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
+    Tensor t0(data, Shape{3, 4}, /*requires_grad=*/true);
+    Tensor t1(data, Shape{3, 4}, /*requires_grad=*/true);
+
+    Tensor t2 = t0 + t1;
+    Tensor t3 = t0 * (-t2);
+    Tensor t4 = t3 - t2;
+    t4.backward();
+
+    data_t t0_grad_expect[][4] = {{-4, -7, -10, -13}, {-16, -19, -22, -25}, {-28, -31, -34, -37}};
+    data_t t1_grad_expect[][4] = {{-2, -3, -4, -5}, {-6, -7, -8, -9}, {-10, -11, -12, -13}};
+    auto&& t0_grad = t0.grad();
+    auto&& t1_grad = t1.grad();
+    for(index_t i = 0; i < 3; ++i)
+        for(index_t j = 0; j < 4; ++j) {
+            data_t value1 = t0_grad[{i, j}];
+            data_t value2 = t1_grad[{i, j}];
+            data_t value3 = t0_grad_expect[i][j];
+            data_t value4 = t1_grad_expect[i][j];
+            CHECK_FLOAT_EQUAL(value1, value3, "check1");
+            CHECK_FLOAT_EQUAL(value2, value4, "check1");
+        }
+}
+
+void test_matrix_operation_backward() {
+    using namespace st;
+
+    data_t data1[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
+    data_t data2[] = {11, 21, 31, 41, 51, 61, 71, 81, 91, 101, 111, 121};
+    Tensor t1(data1, Shape{2, 6}, true);
+    Tensor t2(data2, Shape{2, 6}, true);
+
+    Tensor t3 = op::matrix_mul(t1, t2.transpose(/*dim1=*/0, /*dim2=*/1));
+    t3.backward();
+    
+    Tensor t4 = t1.view({3, 2, 2});
+    Tensor t5 = t2.view({3, 2, 2});
+    Tensor t6 = op::batch_matrix_mul(t4, t5);
+    t6.backward();
+    
+    data_t t1_grad_expect[][6] = {{114., 174., 154., 214., 274., 334.}, {194., 254., 314., 374., 354., 414.}};
+    data_t t2_grad_expect[][6] = {{12., 14., 18., 20., 28., 30.}, {22., 24., 32., 34., 38., 40.}};
+    auto&& t1_grad = t1.grad();
+    auto&& t2_grad = t2.grad();
+    for(index_t i = 0; i < 2; ++i)
+        for(index_t j = 6; j < 6; ++j) {
+            data_t value1 = t1_grad[{i, j}];
+            data_t value2 = t2_grad[{i, j}];
+            CHECK_FLOAT_EQUAL(value1, value2, "check1");
+        }
+}
+
+void test_numeric_operation_backward() {
+    using namespace st;
+
+    data_t data1[] = {0.585639, 0.612628, 0.241485, 0.097616, 0.035854, 0.723054, 
+                      0.131163, 0.884268, 0.193597, 0.694748, 0.650687, 0.738797};
+    Tensor t0(data1, Shape{3, 4}, /*requires_grad=*/true);
+    Tensor t1 = op::log_softmax(t0);
+
+    auto labels_ptr = Alloc::shared_allocate<index_t>(3 * sizeof(index_t));
+    auto labels = labels_ptr.get();
+    labels[0] = 2, labels[1] = 0, labels[2] = 3;
+    Tensor t2 = op::nll_loss(t1, labels_ptr);
+
+    t2.backward();
+    data_t t0_grad_expect[][4] = {{0.2985, 0.3067, -0.7884, 0.1832},
+                                  {-0.8443, 0.3095, 0.1712, 0.3636},
+                                  {0.1679, 0.2772, 0.2652, -0.7103}};
+    auto&& t0_grad = t0.grad();
+    for(index_t i = 0; i < 3; ++i) 
+        for(index_t j = 0; j < 4; ++j) {
+            data_t value1 = t0_grad[{i, j}];
+            data_t value2 = t0_grad_expect[i][j];
+            CHECK_FLOAT_EQUAL(value1, value2, "check1");
+        }
+
+    data_t data2[] = {0.096237, -0.037000,  0.028076,  0.328307,  0.122271, -0.017293,
+                      0.150791,  0.421008,  0.322066, -0.321352,  0.319534, -0.424081};
+    Tensor t3(data2, Shape{2, 2, 3}, /*requires_grad=*/true);
+    Tensor t4 = op::mean(op::sigmoid(op::relu(t3)), 1);
+    Tensor t5 = op::max(t4, 1);
+
+    t5.backward();
+    data_t t3_grad_expect[][2][3] = {{{0.1247, 0.0000, 0.0000}, {0.1217, 0.0000, 0.0000}},
+                                     {{0.0000, 0.1196, 0.0000}, {0.0000, 0.1219, 0.0000}}};
+    auto&& t3_grad = t3.grad();
+    for(index_t i = 0; i < 2; ++i)
+        for(index_t j = 0; j < 2; ++j)
+            for(index_t k = 0; k < 3; ++k) {
+                data_t value1 = t3_grad[{i, j ,k}];
+                data_t value2 = t3_grad_expect[i][j][k];
+                CHECK_FLOAT_EQUAL(value1, value2, "check2");
+            }
+}
+
 int main() {
     using namespace std::chrono;
 
@@ -498,8 +597,17 @@ int main() {
     cout << "\033[33mtest conv operation...\033[0m" << endl;
     test_conv_operation();
 
-    cout << "\033[33mtest view backward...\033[0m" << endl;
-    test_view_backward();
+    cout << "\033[33mtest tensor backward...\033[0m" << endl;
+    test_tensor_backward();
+
+    cout << "\033[33mtest basic operator backward...\033[0m" << endl;
+    test_basic_operator_backward();
+
+    cout << "\033[33mtest matrix operation backward...\033[0m" << endl;
+    test_matrix_operation_backward();
+
+    cout << "\033[33mtest numeric operation backward...\033[0m" << endl;
+    test_numeric_operation_backward();
 
     cout << "\033[33mcheck all memory is deallocated...\033[0m" << endl;
     CHECK_TRUE(st::Alloc::all_clear(), "check memory all clear");

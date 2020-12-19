@@ -140,7 +140,7 @@ struct Sigmoid: public UnaryBasicOperator {
         static data_t map(IndexArray& inds, const GradType& grad, 
                           const OperandType& operand) {
             data_t value = Sigmoid::map(inds, operand);
-            return value * (1 - value);
+            return value * (1 - value) * grad.eval(inds);
         }
     };
 };

@@ -19,15 +19,16 @@ class TensorImpl : public ExpImpl<TensorImpl> {
 public:
     // constructor
     TensorImpl(const Storage& storage, const Shape& shape, const IndexArray& stride,
-           bool requires_grad=false);
+               bool requires_grad=false);
     TensorImpl(const Storage& storage, const Shape& shape, 
-           bool requires_grad=false);
+               bool requires_grad=false);
     TensorImpl(const data_t* data, const Shape& shape, 
-           bool requires_grad=false);
+               bool requires_grad=false);
     explicit TensorImpl(const Shape& shape, 
-                    bool requires_grad=false);
+                        bool requires_grad=false);
     TensorImpl(Storage&& storage, Shape&& shape, IndexArray&& stride, 
-           bool requires_grad=false);
+               bool requires_grad=false);
+    template<typename ImplType> TensorImpl(const ImplType& impl);
     
     TensorImpl(const TensorImpl& other) = delete;
     TensorImpl(TensorImpl&& other) = default;
@@ -116,7 +117,8 @@ public:
         if(ptr->requires_grad()) {
             CHECK_EQUAL(version_, ptr->version(),
                 "Leaf variable has been moved into the graph interior");
-            -- ptr->gradcount_;
+            if(with_grad_)
+                --ptr->gradcount_;
             ptr->backward(grad);
         }
     }
@@ -126,7 +128,8 @@ public:
         if(ptr->requires_grad()) {
             CHECK_EQUAL(version_, ptr->version(),
                 "Leaf variable has been moved into the graph interior");
-            -- ptr->gradcount_;
+            if(with_grad_)
+                --ptr->gradcount_;
             ptr->backward();
         }
     }
@@ -171,6 +174,12 @@ void __inplacement_add_uncontiguous(Storage& dist_storage, const Shape& dist_sha
 
 
 // member template function definition
+template<typename ImplType>
+TensorImpl::TensorImpl(const ImplType& impl)
+        : TensorImpl(impl.size(), impl.requires_grad()) {
+    this->operator=(impl);
+}
+
 template<typename ImplType> 
 TensorImpl& TensorImpl::operator=(const ImplType& exp_impl) {
     CHECK_EXP_BROADCAST(*this, exp_impl);
@@ -232,7 +241,7 @@ void TensorImpl::backward(const ImplType& grad) {
 }
 
 inline void TensorImpl::backward(void) {
-    if(gradcount() == 0) {
+    if(bool(gradmeta_ptr_->grad_fn_ptr_) && gradcount() == 0) {
         auto& grad_fn = *(gradmeta_ptr_->grad_fn_ptr_);
         if(gradmeta_ptr_->from_view_)
             grad_fn();

@@ -61,7 +61,7 @@ struct LogSoftmax {
                           const OperandType& operand, data_t* batch_sum_exp,
                           data_t* batch_max_cls) {
             data_t x = operand.eval(inds);
-            data_t softmax = (x - batch_max_cls[inds[0]]) / batch_sum_exp[inds[0]];
+            data_t softmax = (std::exp(x - batch_max_cls[inds[0]])) / batch_sum_exp[inds[0]];
 
             index_t n_cls = operand.size(1);
             IndexArray grad_inds(inds);
