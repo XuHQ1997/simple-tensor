@@ -68,8 +68,8 @@ struct Img2col {
             // operand size: (b, c, h, w)
             // grad size: (c*kh*kw, oh*ow*b)
             index_t n_batch = operand.size(0);
-            index_t img_h = operand.size(2);
-            index_t img_w = operand.size(3);
+            index_t img_h = operand.size(2) + (padding_size.first << 1);
+            index_t img_w = operand.size(3) + (padding_size.second << 1);
             index_t kh_idx, kw_idx;  // location in a patch
             index_t ph_idx, pw_idx;  // location of the left top point of a patch
             IndexArray grad_inds(2);
@@ -80,18 +80,28 @@ struct Img2col {
             index_t oh_step = out_size.second * n_batch;
             index_t ow_step = n_batch;
 
-            for(kh_idx = 0; kh_idx < kernel_size.first; ++kh_idx) {
-                for(kw_idx = 0; kw_idx < kernel_size.second; ++kw_idx) {
-                    // index_t is unsiged int. Can't substract here.
-                    ph_idx = inds[2] /* - kh_idx */ + padding_size.first;
-                    pw_idx = inds[3] /* - kw_idx */ + padding_size.second;
+            /* The two for-loops below has the same meaning. 
+                for(kh_idx = 0; kh_idx < kernel_size.first; ++kh_idx) {
+                    for(kw_idx = 0; kw_idx < kernel_size.second; ++kw_idx) {
+                        ph_idx = inds[2] - kh_idx + padding_size.first;
+                        pw_idx = inds[3] - kw_idx + padding_size.second;
+                        // neglect that ph_idx and pw_idx is unsigned int
+                        if(ph_idx < 0 || pw_idx < 0)
+                            continue;
+                        
+                        ... ...
+                    }
+                }
+            */
+            inds[2] += padding_size.first;
+            inds[3] += padding_size.second;
+            for(kh_idx = 0; kh_idx < kernel_size.first && kh_idx <= inds[2]; ++kh_idx) {
+                for(kw_idx = 0; kw_idx < kernel_size.second && kw_idx <= inds[3]; ++kw_idx) {
+                    ph_idx = inds[2] - kh_idx;
+                    pw_idx = inds[3] - kw_idx;
 
-                    if(ph_idx < kh_idx || pw_idx < kw_idx) 
-                        continue;
-                    ph_idx -= kh_idx;
-                    pw_idx -= kw_idx;
-                    if(ph_idx + kernel_size.first - padding_size.first > img_h 
-                    || pw_idx + kernel_size.second - padding_size.second > img_w
+                    if(ph_idx + kernel_size.first > img_h 
+                    || pw_idx + kernel_size.second > img_w
                     || ph_idx % stride_size.first 
                     || pw_idx % stride_size.second)
                         continue;

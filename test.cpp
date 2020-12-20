@@ -159,7 +159,7 @@ void test_Tensor() {
             }
 }
 
-void test_basic_operation() {
+void test_basic_operator() {
     using namespace st;
 
     data_t data[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
@@ -267,7 +267,7 @@ void test_basic_operation() {
         }
 }
 
-void test_matrix_operation() {
+void test_matrix_operator() {
     using namespace st;
 
     data_t data1[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
@@ -303,7 +303,7 @@ void test_matrix_operation() {
 
 }
 
-void test_numeric_operation() {
+void test_numeric_operator() {
     using namespace st;
     data_t data1[] = {0.585639, 0.612628, 0.241485, 0.097616, 0.035854, 0.723054, 
                       0.131163, 0.884268, 0.193597, 0.694748, 0.650687, 0.738797};
@@ -366,7 +366,7 @@ void test_numeric_operation() {
         }
 }
 
-void test_conv_operation() {
+void test_conv_operator() {
     using namespace st;
     data_t data[6][4] = {{0.4279, 0.7488, 0.3639, 0.5433}, {0.2849, 0.6536, 0.8932, 0.9341}, {0.9640, 0.4822, 0.1887, 0.9457},
                          {0.2132, 0.0185, 0.0163, 0.9874}, {0.2039, 0.8020, 0.3766, 0.6537}, {0.8543, 0.3589, 0.5178, 0.7816}};
@@ -502,7 +502,7 @@ void test_basic_operator_backward() {
         }
 }
 
-void test_matrix_operation_backward() {
+void test_matrix_operator_backward() {
     using namespace st;
 
     data_t data1[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
@@ -530,7 +530,7 @@ void test_matrix_operation_backward() {
         }
 }
 
-void test_numeric_operation_backward() {
+void test_numeric_operator_backward() {
     using namespace st;
 
     data_t data1[] = {0.585639, 0.612628, 0.241485, 0.097616, 0.035854, 0.723054, 
@@ -574,6 +574,32 @@ void test_numeric_operation_backward() {
             }
 }
 
+void test_img2col_operator_backward() {
+    using namespace st;
+    data_t data[6][4] = {{0.4279, 0.7488, 0.3639, 0.5433}, {0.2849, 0.6536, 0.8932, 0.9341}, {0.9640, 0.4822, 0.1887, 0.9457},
+                         {0.2132, 0.0185, 0.0163, 0.9874}, {0.2039, 0.8020, 0.3766, 0.6537}, {0.8543, 0.3589, 0.5178, 0.7816}};
+    Tensor t0(reinterpret_cast<data_t*>(data), Shape{1, 1, 6, 4}, true);
+
+    Tensor t1 = op::img2col(t0, /*kernel_size=*/{5, 3},
+                            /*stride=*/{1, 1}, /*padding=*/{0, 0});
+    t1.backward();
+
+    Tensor t2 = op::img2col(t0, /*kernel_size=*/{3, 3},
+                            /*stride=*/{1, 1}, /*padding=*/{1, 1});
+    t2.backward();
+
+    auto&& t0_grad = t0.grad();
+    data_t t0_grad_expect[][4] = {{5., 8., 8., 5.}, {8., 13., 13., 8.}, {8., 13., 13., 8.},
+                                  {8., 13., 13., 8.}, {8., 13., 13., 8.}, {5., 8., 8., 5.}};
+    for(index_t i = 0; i < 6; ++i) {
+        for(index_t j = 0; j < 4; ++j) {
+            data_t value1 = t0_grad[{0, 0, i, j}];
+            data_t value2 = t0_grad_expect[i][j];
+            CHECK_EQUAL(value1, value2, "check1");
+        }
+    }
+}
+
 int main() {
     using namespace std::chrono;
 
@@ -585,17 +611,17 @@ int main() {
     cout << "\033[33mtest tensor...\33[0m" << endl;
     test_Tensor();
 
-    cout << "\033[33mtest basic operation...\033[0m" << endl;
-    test_basic_operation();
+    cout << "\033[33mtest basic operator...\033[0m" << endl;
+    test_basic_operator();
 
-    cout << "\033[33mtest matrix operation...\033[0m" << endl;
-    test_matrix_operation();
+    cout << "\033[33mtest matrix operator...\033[0m" << endl;
+    test_matrix_operator();
 
-    cout << "\033[33mtest numeric operation...\033[0m" << endl;
-    test_numeric_operation();
+    cout << "\033[33mtest numeric operator...\033[0m" << endl;
+    test_numeric_operator();
 
-    cout << "\033[33mtest conv operation...\033[0m" << endl;
-    test_conv_operation();
+    cout << "\033[33mtest conv operator...\033[0m" << endl;
+    test_conv_operator();
 
     cout << "\033[33mtest tensor backward...\033[0m" << endl;
     test_tensor_backward();
@@ -603,11 +629,14 @@ int main() {
     cout << "\033[33mtest basic operator backward...\033[0m" << endl;
     test_basic_operator_backward();
 
-    cout << "\033[33mtest matrix operation backward...\033[0m" << endl;
-    test_matrix_operation_backward();
+    cout << "\033[33mtest matrix operator backward...\033[0m" << endl;
+    test_matrix_operator_backward();
 
-    cout << "\033[33mtest numeric operation backward...\033[0m" << endl;
-    test_numeric_operation_backward();
+    cout << "\033[33mtest numeric operator backward...\033[0m" << endl;
+    test_numeric_operator_backward();
+
+    cout << "\033[33mtest img2col operator backward...\033[0m" << endl;
+    test_img2col_operator_backward();
 
     cout << "\033[33mcheck all memory is deallocated...\033[0m" << endl;
     CHECK_TRUE(st::Alloc::all_clear(), "check memory all clear");

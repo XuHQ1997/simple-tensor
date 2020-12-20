@@ -9,7 +9,7 @@ For many reasons, the repositories such as Pytorch and Tensorflow is too complic
 - [x] Memory management
 - [x] Basic operations of Tensor
 - [x] Expression Templates
-- [ ] Autograd  based on Dynamic Computational Graph
+- [x] Autograd  based on Dynamic Computational Graph
 - [ ] Simple Neural Network
 
 ### Build and Run
