@@ -152,8 +152,6 @@ private:
     Alloc::nontrivial_delete_handler<TensorImpl> delete_handler;
 };
 }  // namespace st
-
-
 #include "tensor/grad_meta.h"
 
 namespace st {

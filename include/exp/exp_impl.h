@@ -519,10 +519,11 @@ template<>
 class UnaryExpImpl<op::Constant, data_t>
         : public ExpImpl<UnaryExpImpl<op::Constant, data_t>> {
 public:
-    UnaryExpImpl(data_t value) : value_(value) {}
+    UnaryExpImpl(data_t value, IndexArray&& size) 
+            : value_(value), shape_(std::move(size)) {}
 
-    index_t ndim(void) const { return op::Constant::ndim(); }
-    index_t size(index_t idx) const { return op::Constant::size(idx); }
+    index_t ndim(void) const { return shape_.size(); }
+    index_t size(index_t idx) const { return shape_[idx]; }
     IndexArray size(void) const {
         IndexArray shape(ndim());
         for(index_t i = 0; i < shape.size(); ++i)
@@ -543,6 +544,7 @@ public:
 
 private:
     data_t value_;
+    IndexArray shape_;
 };
 
 }  // namespace st

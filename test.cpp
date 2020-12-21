@@ -216,9 +216,9 @@ void test_basic_operator() {
     Tensor t6 = t1.view({2, 1, 1, 2, 3});
     Tensor t7 = t1.view({2, 2, 1, 1, 3});
     Tensor t8 = t1.view({2, 2, 3});
-    auto exp1 = t6 + t7;
-    auto exp2 = t6 * (-t8);
-    auto exp3 = t6 - t8;
+    Tensor exp1 = t6 + t7;
+    Tensor exp2 = -(t6 * t8);
+    Tensor exp3 = t6 - t8;
     Tensor t9 = exp1 + exp2 + exp3;
     for(index_t i = 0; i < 2; ++i)
         for(index_t j = 0; j < 2; ++j)
@@ -231,8 +231,8 @@ void test_basic_operator() {
                         value2    += t6[{i, 0, 0, l, m}] - t8[{i, j, k}];
                         CHECK_FLOAT_EQUAL(value1, value2, "check 3");
                     }
-    
-    Tensor t10 = t1.transpose(0, 1) + op::constant(1);
+
+    Tensor t10 = t1.transpose(0, 1) + op::constant(1, {4, 3});
     for(index_t i = 0; i < 4; ++i)
         for(index_t j = 0; j < 3; ++j) {
             data_t value1 = t10[{i, j}];
@@ -245,7 +245,7 @@ void test_basic_operator() {
     Tensor t12 = t2.transpose(0, 1);
     Tensor t13(data, t11.size());
     t11 = t13;
-    t12 = t11 + op::constant(0);
+    t12 = t11 + op::constant(0, {4, 3});
     for(index_t i = 0; i < 4; ++i)
         for(index_t j = 0; j < 3; ++j) {
             data_t value1 = t11[{i, j}];

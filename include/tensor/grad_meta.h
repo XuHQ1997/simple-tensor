@@ -3,7 +3,6 @@
 
 #include "utils/exception.h"
 #include "exp/grad_impl.h"
-#include "exp/function.h"
 #include "tensor/tensor_impl.h"
 
 

@@ -54,7 +54,7 @@ operator-(const Exp<OIType>& operand) {
 template<typename LhsImplType, typename RhsImplType>
 Exp<BinaryExpImpl<Add, LhsImplType, RhsImplType>>
 add(const Exp<LhsImplType>& lhs, const Exp<RhsImplType>& rhs) {
-    CHECK_EXP_BROADCAST(lhs.impl(), rhs.impl());
+    CHECK_EXP_SAME_SHAPE(lhs.impl(), rhs.impl());
     return binary_operation_function<Add, LhsImplType, RhsImplType>(lhs, rhs);
 }
 template<typename LhsImplType, typename RhsImplType>
@@ -66,7 +66,7 @@ operator+(const Exp<LhsImplType>& lhs, const Exp<RhsImplType>& rhs) {
 template<typename LhsImplType, typename RhsImplType>
 Exp<BinaryExpImpl<Mul, LhsImplType, RhsImplType>>
 mul(const Exp<LhsImplType>& lhs, const Exp<RhsImplType>& rhs) {
-    CHECK_EXP_BROADCAST(lhs.impl(), rhs.impl());
+    CHECK_EXP_SAME_SHAPE(lhs.impl(), rhs.impl());
     return binary_operation_function<Mul, LhsImplType, RhsImplType>(lhs, rhs);
 }
 template<typename LhsImplType, typename RhsImplType>
@@ -78,7 +78,7 @@ operator*(const Exp<LhsImplType>& lhs, const Exp<RhsImplType>& rhs) {
 template<typename LhsImplType, typename RhsImplType>
 Exp<BinaryExpImpl<Sub, LhsImplType, RhsImplType>>
 sub(const Exp<LhsImplType>& lhs, const Exp<RhsImplType>& rhs) {
-    CHECK_EXP_BROADCAST(lhs.impl(), rhs.impl());
+    CHECK_EXP_SAME_SHAPE(lhs.impl(), rhs.impl());
     return binary_operation_function<Sub, LhsImplType, RhsImplType>(lhs, rhs);
 }
 template<typename LhsImplType, typename RhsImplType>
@@ -140,9 +140,7 @@ batch_matrix_mul(const Exp<LhsImplType>& lhs, const Exp<RhsImplType>& rhs) {
     CHECK_TRUE(lhs_impl.ndim() == 3 && rhs_impl.ndim() == 3, 
         "Baths of Matrices expected, got %dD and %dD Tensor。", 
         lhs_impl.ndim(), rhs_impl.ndim());
-    CHECK_TRUE(lhs_impl.size(0) == rhs_impl.size(0) 
-            || lhs_impl.size(0) == 1 
-            || rhs_impl.size(0) == 1,
+    CHECK_TRUE(lhs_impl.size(0) == rhs_impl.size(0),
         "Bath sizes, %d and %d, doesn't match.",
         lhs_impl.size(0), rhs_impl.size(0));
     CHECK_EQUAL(lhs_impl.size(2), rhs_impl.size(1),
@@ -279,9 +277,11 @@ max_pool2d(const Exp<OIType>& operand, const MaxPool2d::Wsize& kernel_size,
 }
 
 inline Exp<UnaryExpImpl<Constant, data_t>>
-constant(data_t value) {
+constant(data_t value, IndexArray&& size=IndexArray{1}) {
     return Exp<UnaryExpImpl<Constant, data_t>>(
-        Alloc::unique_construct<UnaryExpImpl<Constant, data_t>>(value)
+        Alloc::unique_construct<UnaryExpImpl<Constant, data_t>>(
+            value, std::move(size)
+        )
     );
 }
 
