@@ -182,7 +182,7 @@ TensorImpl::TensorImpl(const ImplType& impl)
 
 template<typename ImplType> 
 TensorImpl& TensorImpl::operator=(const ImplType& exp_impl) {
-    CHECK_EXP_BROADCAST(*this, exp_impl);
+    CHECK_EXP_SAME_SHAPE(*this, exp_impl);
 
     if(requires_grad_) {
         gradmeta_ptr_->set_grad_fn(exp_impl);
@@ -199,7 +199,7 @@ TensorImpl& TensorImpl::operator=(const ImplType& exp_impl) {
 
 template<typename ImplType>
 TensorImpl& TensorImpl::operator+=(const ImplType& exp_impl) {
-    CHECK_EXP_BROADCAST(*this, exp_impl);
+    CHECK_EXP_SAME_SHAPE(*this, exp_impl);
 
     if(requires_grad_) {
         gradmeta_ptr_->set_grad_fn(exp_impl);
@@ -215,7 +215,7 @@ TensorImpl& TensorImpl::operator+=(const ImplType& exp_impl) {
 }
 
 inline TensorImpl& TensorImpl::operator=(const TensorImpl& other) {
-    CHECK_EXP_BROADCAST(*this, other);
+    CHECK_EXP_SAME_SHAPE(*this, other);
 
     if(requires_grad_) {
         gradmeta_ptr_->set_grad_fn(other);
