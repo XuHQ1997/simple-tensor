@@ -88,27 +88,39 @@ private:
 };
 }  // namespace st
 
-
 namespace st {
+
+template<typename Op, typename OIType>
+IndexArray __get_exp_shape(const OIType& operand) {
+    IndexArray shape(Op::ndim(operand));
+    for(index_t i = 0; i < shape.size(); ++i)
+        shape[i] = Op::size(i, operand);
+    return shape;
+}
+
+template<typename Op, typename LhsImplType, typename RhsImplType>
+IndexArray __get_exp_shape(const LhsImplType& lhs, const RhsImplType& rhs) {
+    IndexArray shape(Op::ndim(lhs, rhs));
+    for(index_t i = 0; i < shape.size(); ++i)
+        shape[i] = Op::size(i, lhs, rhs);
+    return shape;
+}
+
 template<typename Op, typename OIType>  // OIType = OperandImplType
 class UnaryExpImpl 
         : public ExpImpl<UnaryExpImpl<Op, OIType>> {
 public:
     explicit UnaryExpImpl(const OperandImplPtr<OIType>& ptr)
-            : operand_ptr_(ptr, true) {}
+            : operand_ptr_(ptr, true),
+              shape_(__get_exp_shape<Op, OIType>(*operand_ptr_)) 
+        {}
 
-    index_t ndim(void) const { return Op::ndim(*operand_ptr_); }
-    index_t size(index_t idx) const { return Op::size(idx, *operand_ptr_); }
+    index_t ndim(void) const { return shape_.size(); }
+    index_t size(index_t idx) const { return shape_[idx]; }
+    IndexArray size(void) const { return shape_; }
 
     data_t eval(IndexArray& inds) const {
         return Op::map(inds, *operand_ptr_);
-    }
-
-   IndexArray size(void) const {
-        IndexArray shape(ndim());
-        for(index_t i = 0; i < shape.size(); ++i)
-            shape[i] = size(i);
-        return shape;
     }
 
     bool requires_grad(void) const { return operand_ptr_->requires_grad(); }
@@ -124,6 +136,7 @@ public:
     }
 private:
     OperandImplPtr<OIType> operand_ptr_;
+    IndexArray shape_;
 };
 
 template<typename Op, typename LhsImplType, typename RhsImplType>
@@ -133,20 +146,17 @@ public:
     BinaryExpImpl(const OperandImplPtr<LhsImplType>& lhs_ptr,
                   const OperandImplPtr<RhsImplType>& rhs_ptr)
             : lhs_ptr_(lhs_ptr, true),
-              rhs_ptr_(rhs_ptr, true) {}
+              rhs_ptr_(rhs_ptr, true),
+              shape_(__get_exp_shape<Op, LhsImplType, RhsImplType>(
+                  *lhs_ptr_, *rhs_ptr_)) 
+        {}
 
-    index_t ndim(void) const { return Op::ndim(*lhs_ptr_, *rhs_ptr_); }
-    index_t size(index_t idx) const { return Op::size(idx, *lhs_ptr_, *rhs_ptr_); }
+    index_t ndim(void) const { return shape_.size(); }
+    index_t size(index_t idx) const { return shape_[idx]; }
+    IndexArray size(void) const { return shape_; }
 
     data_t eval(IndexArray& inds) const {
         return Op::map(inds, *lhs_ptr_, *rhs_ptr_);
-    }
-
-    IndexArray size(void) const {
-        IndexArray shape(ndim());
-        for(index_t i = 0; i < shape.size(); ++i)
-            shape[i] = size(i);
-        return shape;
     }
 
     bool requires_grad(void) const { 
@@ -187,6 +197,7 @@ public:
 private:
     OperandImplPtr<LhsImplType> lhs_ptr_;
     OperandImplPtr<RhsImplType> rhs_ptr_;
+    IndexArray shape_;
 };
 } // namespace st
 
@@ -206,6 +217,7 @@ class UnaryExpImpl<op::LogSoftmax, OIType>
 public:
     explicit UnaryExpImpl(const OperandImplPtr<OIType>& ptr)
             : operand_ptr_(ptr, true),
+              shape_(__get_exp_shape<op::LogSoftmax, OIType>(*operand_ptr_)),
               n_batch_(operand_ptr_->size(0)),
               batch_sum_exp_(
                   Alloc::unique_allocate<data_t>(
@@ -217,14 +229,9 @@ public:
                                    batch_max_cls_.get());
     }
 
-    index_t ndim(void) const { return op::LogSoftmax::ndim(*operand_ptr_); }
-    index_t size(index_t idx) const { return op::LogSoftmax::size(idx, *operand_ptr_); }
-    IndexArray size(void) const {
-        IndexArray shape(ndim());
-        for(index_t i = 0; i < shape.size(); ++i)
-            shape[i] = size(i);
-        return shape;
-    }
+    index_t ndim(void) const { return shape_.size(); }
+    index_t size(index_t idx) const { return shape_[idx]; }
+    IndexArray size(void) const { return shape_; }
 
     data_t eval(IndexArray& inds) const {
         return op::LogSoftmax::map(inds, *operand_ptr_, 
@@ -244,10 +251,19 @@ public:
     }
 private:
     OperandImplPtr<OIType> operand_ptr_;
+    IndexArray shape_;
     index_t n_batch_;
     Alloc::TrivialUniquePtr<data_t> batch_sum_exp_;
     Alloc::TrivialUniquePtr<data_t> batch_max_cls_;
 };
+
+template<typename Op, typename OIType>
+IndexArray __get_exp_shape(const OIType& operand, index_t reduction_dim) {
+    IndexArray shape(Op::ndim(operand));
+    for(index_t i = 0; i < shape.size(); ++i)
+        shape[i] = Op::size(i, operand, reduction_dim);
+    return shape;
+}
 
 template<typename OIType>
 class UnaryExpImpl<op::Mean, OIType>
@@ -255,19 +271,12 @@ class UnaryExpImpl<op::Mean, OIType>
 public:
     explicit UnaryExpImpl(const OperandImplPtr<OIType>& ptr, index_t reduce_dim)
             : operand_ptr_(ptr, true),
+              shape_(__get_exp_shape<op::Mean, OIType>(*operand_ptr_, reduce_dim)),
               reduce_dim_(reduce_dim) {}
 
-    index_t ndim(void) const { return op::Mean::ndim(*operand_ptr_); }
-    index_t size(index_t idx) const { 
-        return op::Mean::size(idx, *operand_ptr_, reduce_dim_); 
-    }
-    IndexArray size(void) const {
-        IndexArray shape(ndim());
-        for(index_t i = 0; i < shape.size(); ++i)
-            shape[i] = size(i);
-        return shape;
-    }
-
+    index_t ndim(void) const { return shape_.size(); }
+    index_t size(index_t idx) const { return shape_[idx]; }
+    IndexArray size(void) const { return shape_; }
 
     data_t eval(IndexArray& inds) const {
         return op::Mean::map(inds, *operand_ptr_, reduce_dim_);
@@ -287,6 +296,7 @@ public:
 
 private:
     OperandImplPtr<OIType> operand_ptr_;
+    IndexArray shape_;
     index_t reduce_dim_;    
 };
 
@@ -296,19 +306,12 @@ class UnaryExpImpl<op::Max, OIType>
 public:
     explicit UnaryExpImpl(const OperandImplPtr<OIType>& ptr, index_t reduce_dim)
             : operand_ptr_(ptr, true),
+              shape_(__get_exp_shape<op::Max, OIType>(*operand_ptr_, reduce_dim)),
               reduce_dim_(reduce_dim) {}
 
-    index_t ndim(void) const { return op::Max::ndim(*operand_ptr_); }
-    index_t size(index_t idx) const { 
-        return op::Max::size(idx, *operand_ptr_, reduce_dim_); 
-    }
-    IndexArray size(void) const {
-        IndexArray shape(ndim());
-        for(index_t i = 0; i < shape.size(); ++i)
-            shape[i] = size(i);
-        return shape;
-    }
-
+    index_t ndim(void) const { return shape_.size(); }
+    index_t size(index_t idx) const { return shape_[idx]; }
+    IndexArray size(void) const { return shape_; }
 
     data_t eval(IndexArray& inds) const {
         return op::Max::map(inds, *operand_ptr_, reduce_dim_);
@@ -328,6 +331,7 @@ public:
 
 private:
     OperandImplPtr<OIType> operand_ptr_;
+    IndexArray shape_;
     index_t reduce_dim_;    
 };
 
@@ -337,18 +341,12 @@ class UnaryExpImpl<op::Argmax, OIType>
 public:
     explicit UnaryExpImpl(const OperandImplPtr<OIType>& ptr, index_t reduce_dim)
             : operand_ptr_(ptr, true),
+              shape_(__get_exp_shape<op::Argmax, OIType>(*operand_ptr_, reduce_dim)),
               reduce_dim_(reduce_dim) {}
 
-    index_t ndim(void) const { return op::Argmax::ndim(*operand_ptr_); }
-    index_t size(index_t idx) const { 
-        return op::Argmax::size(idx, *operand_ptr_, reduce_dim_); 
-    }
-    IndexArray size(void) const {
-        IndexArray shape(ndim());
-        for(index_t i = 0; i < shape.size(); ++i)
-            shape[i] = size(i);
-        return shape;
-    }
+    index_t ndim(void) const { return shape_.size(); }
+    index_t size(index_t idx) const { return shape_[idx]; }
+    IndexArray size(void) const { return shape_; }
 
     index_t eval(IndexArray& inds) const {
         return op::Argmax::map(inds, *operand_ptr_, reduce_dim_);
@@ -363,6 +361,7 @@ public:
 
 private:
     OperandImplPtr<OIType> operand_ptr_;
+    IndexArray shape_;
     index_t reduce_dim_;    
 };
 
@@ -373,16 +372,12 @@ public:
     explicit UnaryExpImpl(const OperandImplPtr<OIType>& ptr,
                           const std::shared_ptr<index_t>& batch_label)
             : operand_ptr_(ptr, true),
+              shape_(__get_exp_shape<op::NLLLoss, OIType>(*operand_ptr_)),
               batch_label_(batch_label) {}
 
-    index_t ndim(void) const { return op::NLLLoss::ndim(*operand_ptr_); }
-    index_t size(index_t idx) const { return op::NLLLoss::size(idx, *operand_ptr_); }
-    IndexArray size(void) const {
-        IndexArray shape(ndim());
-        for(index_t i = 0; i < shape.size(); ++i)
-            shape[i] = size(i);
-        return shape;
-    }
+    index_t ndim(void) const { return shape_.size(); }
+    index_t size(index_t idx) const { return shape_[idx]; }
+    IndexArray size(void) const { return shape_; }
 
     data_t eval(IndexArray& inds) const {
         return op::NLLLoss::map(inds, *operand_ptr_, batch_label_.get());
@@ -401,6 +396,7 @@ public:
     }
 private:
     OperandImplPtr<OIType> operand_ptr_;
+    IndexArray shape_;
     std::shared_ptr<index_t> batch_label_;  
 };
 
@@ -413,6 +409,7 @@ public:
                  const op::Img2col::Wsize& stride_size,
                  const op::Img2col::Wsize& padding_size) 
             : operand_ptr_(ptr, true),
+              shape_(2),
               kernel_size_(kernel_size),
               stride_size_(stride_size),
               padding_size_(padding_size) {
@@ -424,20 +421,13 @@ public:
             (h + 2*padding_size_.first - kernel_size_.first) / stride_size_.first + 1;
         out_size_.second = 
             (w + 2*padding_size_.second - kernel_size_.second) / stride_size_.second + 1;
-        shape_.first = out_size_.first * out_size_.second * b;
-        shape_.second = c * kernel_size_.first * kernel_size_.second;
+        shape_[0] = out_size_.first * out_size_.second * b;
+        shape_[1] = c * kernel_size_.first * kernel_size_.second;
     }
 
-    index_t ndim(void) const { return op::Img2col::ndim(*operand_ptr_); }
-    index_t size(index_t idx) const {
-        return op::Img2col::size(idx, *operand_ptr_, shape_);
-    }
-   IndexArray size(void) const {
-        IndexArray shape(ndim());
-        for(index_t i = 0; i < shape.size(); ++i)
-            shape[i] = size(i);
-        return shape;
-    }
+    index_t ndim(void) const { return shape_.size(); }
+    index_t size(index_t idx) const { return shape_[idx]; }
+    IndexArray size(void) const { return shape_; }
 
     data_t eval(IndexArray& inds) const {
         return op::Img2col::map(inds, *operand_ptr_, kernel_size_,
@@ -458,11 +448,11 @@ public:
     }
 private:
     OperandImplPtr<OIType> operand_ptr_;
+    IndexArray shape_;
     op::Img2col::Wsize kernel_size_;
     op::Img2col::Wsize stride_size_;
     op::Img2col::Wsize padding_size_;
     op::Img2col::Wsize out_size_;
-    op::Img2col::Wsize shape_;
 };
 
 template<typename OIType>
@@ -474,6 +464,7 @@ public:
                  const op::MaxPool2d::Wsize& stride_size,
                  const op::MaxPool2d::Wsize& padding_size) 
             : operand_ptr_(ptr, true),
+              shape_(4),
               kernel_size_(kernel_size),
               stride_size_(stride_size),
               padding_size_(padding_size) {
@@ -483,18 +474,16 @@ public:
             (h + 2*padding_size_.first - kernel_size_.first) / stride_size_.first + 1;
         out_size_.second = 
             (w + 2*padding_size_.second - kernel_size_.second) / stride_size_.second + 1;
+
+        shape_[0] = operand_ptr_->size(0);  // n_batch
+        shape_[1] = operand_ptr_->size(1);  // n_channels
+        shape_[2] = out_size_.first;
+        shape_[3] = out_size_.second;
     }
 
-    index_t ndim(void) const { return op::MaxPool2d::ndim(*operand_ptr_); }
-    index_t size(index_t idx) const {
-        return op::MaxPool2d::size(idx, *operand_ptr_, out_size_);
-    }
-    IndexArray size(void) const {
-        IndexArray shape(ndim());
-        for(index_t i = 0; i < shape.size(); ++i)
-            shape[i] = size(i);
-        return shape;
-    }
+    index_t ndim(void) const { return shape_.size(); }
+    index_t size(index_t idx) const { return shape_[idx]; }
+    IndexArray size(void) const { return shape_; }
 
     data_t eval(IndexArray& inds) const {
         return op::MaxPool2d::map(inds, *operand_ptr_, kernel_size_,
@@ -509,6 +498,7 @@ public:
     }
 private:
     OperandImplPtr<OIType> operand_ptr_;
+    IndexArray shape_;
     op::MaxPool2d::Wsize kernel_size_;
     op::MaxPool2d::Wsize stride_size_;
     op::MaxPool2d::Wsize padding_size_;
@@ -521,14 +511,9 @@ class UnaryExpImpl<op::Constant, data_t>
 public:
     UnaryExpImpl(data_t value) : value_(value) {}
 
-    index_t ndim(void) const { return op::Constant::ndim(); }
-    index_t size(index_t idx) const { return op::Constant::size(idx); }
-    IndexArray size(void) const {
-        IndexArray shape(ndim());
-        for(index_t i = 0; i < shape.size(); ++i)
-            shape[i] = size(i);
-        return shape;
-    }
+    index_t ndim(void) const { return 1; }
+    index_t size(index_t idx) const { return 1; }
+    IndexArray size(void) const { return {1}; }
 
     data_t eval(IndexArray& inds) const {
         return op::Constant::map(inds, value_);

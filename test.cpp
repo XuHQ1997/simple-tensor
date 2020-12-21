@@ -232,16 +232,16 @@ void test_basic_operator() {
                         CHECK_FLOAT_EQUAL(value1, value2, "check 3");
                     }
     
-    Tensor t10(Shape{2, 2, 3, 3});
-    t10 = t8;
-    for(index_t i = 0; i < 2; ++i)
-        for(index_t j = 0; j < 2; ++j)
-            for(index_t k = 0; k < 3; ++k)
-                for(index_t l = 0; l < 3; ++l) {
-                    data_t value1 = t10[{i, j, k, l}];
-                    data_t value2 = t8[{i, j, k}];
-                    CHECK_FLOAT_EQUAL(value1, value2, "check 4");
-                }
+    // Tensor t10(Shape{2, 2, 3, 3});
+    // t10 = t8;
+    // for(index_t i = 0; i < 2; ++i)
+    //     for(index_t j = 0; j < 2; ++j)
+    //         for(index_t k = 0; k < 3; ++k)
+    //             for(index_t l = 0; l < 3; ++l) {
+    //                 data_t value1 = t10[{i, j, k, l}];
+    //                 data_t value2 = t8[{i, j, k}];
+    //                 CHECK_FLOAT_EQUAL(value1, value2, "check 4");
+    //             }
     
     Tensor t11 = t1.transpose(0, 1) + op::constant(1);
     for(index_t i = 0; i < 4; ++i)
@@ -256,8 +256,7 @@ void test_basic_operator() {
     Tensor t13 = t2.transpose(0, 1);
     Tensor t14(data, t12.size());
     t12 = t14;
-    t13 = op::constant(0);
-    t13 += t12;
+    t13 = t12 + op::constant(0);
     for(index_t i = 0; i < 4; ++i)
         for(index_t j = 0; j < 3; ++j) {
             data_t value1 = t12[{i, j}];
@@ -427,7 +426,7 @@ void test_conv_operator() {
         for(index_t j = 0; j < 2; ++j) {
             data_t value1 = t2[{0, 0, i, j}];
             data_t value2 = t2_expect[i][j];
-            CHECK_EQUAL(value1, value2, "check3");
+            CHECK_FLOAT_EQUAL(value1, value2, "check3");
         }
     
     Tensor t3 = op::img2col(t0, /*kernel_size=*/{4, 4}, 
@@ -446,11 +445,16 @@ void test_conv_operator() {
         for(index_t j = 0; j < 16; ++j) {
             data_t value1 = t3[{i, j}];
             data_t value2 = t3_expect[i][j];
-            CHECK_EQUAL(value1, value2, "check4");
+            CHECK_FLOAT_EQUAL(value1, value2, "check4");
         }
-    
-    Tensor t4(Shape{2, 3, 6, 4});
-    t4 = t0;  // broadcasting
+
+    data_t t4_data[2][3][6][4];
+    for(index_t i = 0; i < 2; ++i)
+        for(index_t j = 0; j < 3; ++j)
+            for(index_t k = 0; k < 6; ++k)
+                for(index_t l = 0; l < 4; ++l)
+                    t4_data[i][j][k][l] = data[k][l];
+    Tensor t4(reinterpret_cast<data_t*>(t4_data), Shape{2, 3, 6, 4});
     Tensor t5 = op::img2col(t4, /*kernel_size=*/{2, 3}, 
                             /*stride=*/{1, 2}, /*padding=*/{2, 1});
     data_t t5_expect[18][6] = 
@@ -463,7 +467,7 @@ void test_conv_operator() {
         for(index_t j = 0; j < 18; ++j) {
             data_t value1 = t5[{i, j}];
             data_t value2 = t5_expect[i/2][j%6];
-            CHECK_EQUAL(value1, value2, "check5");
+            CHECK_FLOAT_EQUAL(value1, value2, "check5");
         }
 }
 
