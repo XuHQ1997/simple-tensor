@@ -275,8 +275,10 @@ void test_matrix_operator() {
     Tensor t1(data1, Shape{2, 6});
     Tensor t2(data2, Shape{2, 6});
 
-    Tensor t3 = op::matrix_mul(t1, t2.transpose(/*dim1=*/0, /*dim2=*/1));
-    data_t t3_expect[2][2] = {{931, 2191}, {2227, 5647}};
+    Tensor t3 = op::matrix_transpose(
+        op::matrix_mul(t1, t2.transpose(/*dim1=*/0, /*dim2=*/1))
+    );
+    data_t t3_expect[2][2] = {{931, 2227}, {2191, 5647}};
     for(index_t i = 0; i < 2; ++i) {
         for(index_t j = 0; j < 2; ++j) {
             data_t value1 = t3[{i, j}];
@@ -287,10 +289,10 @@ void test_matrix_operator() {
 
     Tensor t4 = t1.view({3, 2, 2});
     Tensor t5 = t2.view({3, 2, 2});
-    Tensor t6 = op::batch_matrix_mul(t4, t5);
-    data_t t6_expect[3][2][2] = {{{73, 103}, {157, 227}}, 
-                                {{681, 791}, {925, 1075}},
-                                {{1929, 2119}, {2333, 2563}}};
+    Tensor t6 = op::batch_matrix_transpose(op::batch_matrix_mul(t4, t5));
+    data_t t6_expect[3][2][2] = {{{73, 157}, {103, 227}},
+                                 {{681, 925}, {791, 1075}},
+                                 {{1929, 2333}, {2119, 2563}}};
     for(index_t i = 0; i < 3; ++i) {
         for(index_t j = 0; j < 2; ++j) {
             for(index_t k = 0; k < 2; ++k) {
@@ -301,6 +303,33 @@ void test_matrix_operator() {
         }
     }
 
+    Tensor t7 = op::matrix_transpose(t1);
+    CHECK_EQUAL(t7.ndim(), 2, "check3");
+    CHECK_EQUAL(t7.size(0), 6, "check3");
+    CHECK_EQUAL(t7.size(1), 2, "check3");
+    for(index_t i = 0; i < 6; ++i) {
+        for(index_t j = 0; j < 2; ++j) {
+            data_t value1 = t1[{j, i}];
+            data_t value2 = t7[{i, j}];
+            CHECK_FLOAT_EQUAL(value1, value2, "check 3");
+        }
+    }
+
+    Tensor t8(data1, Shape{2, 2, 3});
+    Tensor t9 = op::batch_matrix_transpose(t8);
+    CHECK_EQUAL(t9.ndim(), 3, "check4");
+    CHECK_EQUAL(t9.size(0), 2, "check4");
+    CHECK_EQUAL(t9.size(1), 3, "check4");
+    CHECK_EQUAL(t9.size(2), 2, "check4");
+    for(index_t i = 0; i < 2; ++i) {
+        for(index_t j = 0; j < 3; ++j) {
+            for(index_t k = 0; k < 2; ++k) {
+                data_t value1 = t8[{i, k, j}];
+                data_t value2 = t9[{i, j, k}];
+                CHECK_FLOAT_EQUAL(value1, value2, "check 3");
+            }
+        }
+    }   
 }
 
 void test_numeric_operator() {

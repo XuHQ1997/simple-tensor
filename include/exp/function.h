@@ -100,6 +100,24 @@ sigmoid(const Exp<OIType>& operand) {
 }
 
 // function for matrix operation
+template<typename OIType>
+Exp<UnaryExpImpl<MatrixTranspose, OIType>>
+matrix_transpose(const Exp<OIType>& operand) {
+    CHECK_EQUAL(operand.impl().ndim(), 2,
+        "Matrix Transpose is only supported for 2D Tensor, but got %dD one",
+        operand.impl().ndim());
+    return unary_operation_function<MatrixTranspose, OIType>(operand);
+}
+
+template<typename OIType>
+Exp<UnaryExpImpl<BatchMatrixTranspose, OIType>>
+batch_matrix_transpose(const Exp<OIType>& operand) {
+    CHECK_EQUAL(operand.impl().ndim(), 3,
+        "Batch Matrix Transpose is only supported for 3D Tensor, but got %dD one",
+        operand.impl().ndim());
+    return unary_operation_function<BatchMatrixTranspose, OIType>(operand);
+}
+
 template<typename LhsImplType, typename RhsImplType>
 Exp<BinaryExpImpl<MatrixMul, LhsImplType, RhsImplType>>
 matrix_mul(const Exp<LhsImplType>& lhs, const Exp<RhsImplType>& rhs) {
