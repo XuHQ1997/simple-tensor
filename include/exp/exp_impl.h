@@ -424,8 +424,8 @@ public:
             (h + 2*padding_size_.first - kernel_size_.first) / stride_size_.first + 1;
         out_size_.second = 
             (w + 2*padding_size_.second - kernel_size_.second) / stride_size_.second + 1;
-        shape_.first = c * kernel_size_.first * kernel_size_.second;
-        shape_.second = out_size_.first * out_size_.second * b;
+        shape_.first = out_size_.first * out_size_.second * b;
+        shape_.second = c * kernel_size_.first * kernel_size_.second;
     }
 
     index_t ndim(void) const { return op::Img2col::ndim(*operand_ptr_); }

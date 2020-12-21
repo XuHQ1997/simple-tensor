@@ -28,20 +28,20 @@ struct Img2col {
         index_t n_batch = operand.size(0);
         index_t h = operand.size(2);
         index_t w = operand.size(3);
-        index_t row = inds[0];
-        index_t col = inds[1];
-        
-        // size(0) = c * kh * kw
-        index_t c_idx = row / (kernel_size.first * kernel_size.second);
-        row %= kernel_size.first * kernel_size.second;
-        index_t kh_idx = row / kernel_size.second;
-        index_t kw_idx = row % kernel_size.second;
+        index_t col = inds[0];
+        index_t row = inds[1];
 
-        // size(1) = oh * ow * b
+        // size(0) = oh * ow * b
         index_t h_idx = col / (out_size.second * n_batch);
         col %= (n_batch * out_size.second);
         index_t w_idx = col / n_batch;
         index_t b_idx = col % n_batch;
+
+        // size(1) = c * kh * kw
+        index_t c_idx = row / (kernel_size.first * kernel_size.second);
+        row %= kernel_size.first * kernel_size.second;
+        index_t kh_idx = row / kernel_size.second;
+        index_t kw_idx = row % kernel_size.second;
 
         // In fact, index_t is unsigned int, which can't be negative.
         // So we can't substract padding_size here.
@@ -66,7 +66,7 @@ struct Img2col {
                           const Wsize& stride_size, const Wsize& padding_size, 
                           const Wsize& out_size) {
             // operand size: (b, c, h, w)
-            // grad size: (c*kh*kw, oh*ow*b)
+            // grad size: (oh*ow*b, c*kh*kw)
             index_t n_batch = operand.size(0);
             index_t img_h = operand.size(2) + (padding_size.first << 1);
             index_t img_w = operand.size(3) + (padding_size.second << 1);
@@ -106,12 +106,12 @@ struct Img2col {
                     || pw_idx % stride_size.second)
                         continue;
 
-                    grad_inds[0] = inds[1] * c_step
-                                 + kh_idx * kh_step
-                                 + kw_idx;
-                    grad_inds[1] = ph_idx / stride_size.first * oh_step
+                    grad_inds[0] = ph_idx / stride_size.first * oh_step
                                  + pw_idx / stride_size.second * ow_step
                                  + inds[0];
+                    grad_inds[1] = inds[1] * c_step
+                                 + kh_idx * kh_step
+                                 + kw_idx;
                     total_grad += grad.eval(grad_inds);
                 }
             }
