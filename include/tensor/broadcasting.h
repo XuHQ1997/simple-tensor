@@ -1,5 +1,5 @@
-#ifndef TENSOR_FUNCTION_H
-#define TENSOR_FUNCTION_H
+#ifndef TENSOR_BROADCASTING_H
+#define TENSOR_BROADCASTING_H
 
 #include "exp/exp_impl.h"
 #include "exp/grad_impl.h"

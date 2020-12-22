@@ -14,6 +14,9 @@ namespace st {
 
 // foward declaration
 struct AutoGradMeta;
+namespace nn {
+    class InitializerBase;
+}
 
 class TensorImpl : public ExpImpl<TensorImpl> {
 public:
@@ -70,6 +73,7 @@ public:
     // friend function
     friend std::ostream& operator<<(std::ostream& out, const TensorImpl& t);
     friend ExpImplPtr<TensorImpl>;
+    friend class nn::InitializerBase;
 private:
 
     template<typename ImplType> void backward(const ImplType& grad);

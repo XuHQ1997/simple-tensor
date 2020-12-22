@@ -414,12 +414,13 @@ public:
     index_t size(index_t idx) const {
         return op::Img2col::size(idx, *operand_ptr_, shape_);
     }
-   IndexArray size(void) const {
+    IndexArray size(void) const {
         IndexArray shape(ndim());
         for(index_t i = 0; i < shape.size(); ++i)
             shape[i] = size(i);
         return shape;
     }
+    const op::Img2col::Wsize& conv_feat_size(void) const { return out_size_; }
 
     data_t eval(IndexArray& inds) const {
         return op::Img2col::map(inds, *operand_ptr_, kernel_size_,

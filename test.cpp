@@ -10,14 +10,12 @@
 
 #include "utils/base_config.h"
 #include "utils/array.h"
-// CHECK_XXX is defined in utils/exception.h
-// Only work in namespace st.
-#include "utils/exception.h"
+#include "utils/exception.h" // CHECK_XXX is defined in utils/exception.h
+#include "exp/function.h"
 #include "tensor/shape.h"
 #include "tensor/storage.h"
 #include "tensor/tensor_impl.h"
 #include "tensor/tensor.h"
-#include "exp/function.h"
 
 
 using std::cout;
