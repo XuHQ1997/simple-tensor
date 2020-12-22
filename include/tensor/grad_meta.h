@@ -35,6 +35,8 @@ struct GradFn {
                 offset += inds[i] * stride_[i];
             return storage_[offset];
         }
+
+        const Shape& grad_shape(void) const { return shape_; }
     };
 };
 

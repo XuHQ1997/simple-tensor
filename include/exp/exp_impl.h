@@ -156,24 +156,6 @@ public:
     template<typename GIType>
     void backward(const GIType& grad) {
         CHECK_EQUAL(this->gradcount(), 0, "Reused ExpImpl can't be backward.");
-        index_t lhs_ndim = lhs_ptr_->ndim();
-        index_t rhs_ndim = rhs_ptr_->ndim();
-        CHECK_EQUAL(lhs_ndim, rhs_ndim,
-            "Backward for broadcasting operation is not supported.");
-        index_t i = 0;
-        for(i = 0; i < lhs_ndim && lhs_ptr_->size(i) == rhs_ptr_->size(i); ++i)
-            ;
-        if(i != lhs_ndim) {
-            if(lhs_ndim == 2)  // matrix mul
-                CHECK_EQUAL(lhs_ptr_->size(1), rhs_ptr_->size(0),
-                    "Backward for broadcasting operation is not supported.");
-            else if(lhs_ndim == 3 && i > 0)  // batch matrix mul
-                CHECK_EQUAL(lhs_ptr_->size(2), rhs_ptr_->size(1),
-                    "Backward for broadcasting operation is not supported.");
-            else
-                CHECK_TRUE(false, 
-                    "Backward for broadcasting operation is not supported.");
-        }
 
         BinaryGradImpl<typename Op::LhsGrad, GIType, LhsImplType, RhsImplType> 
         lhs_grad(grad, *lhs_ptr_, *rhs_ptr_);

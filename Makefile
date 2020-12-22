@@ -45,7 +45,7 @@ $(BIN)/tensor.o: src\tensor\tensor.cpp include/tensor/tensor.h include/exp/exp.h
  include/exp/operator/conv.h include/exp/operator/basic_op.h \
  include/tensor/tensor_impl.h include/tensor/storage.h \
  include/tensor/shape.h include/tensor/grad_meta.h \
- include/tensor/function.h include/exp/function.h \
+ include/tensor/broadcasting.h include/exp/function.h \
  include/exp/operator/matrix_op.h
 	$(CXX) $(CXX_FLAGS) -I $(INCLUDE) -c -o $(BIN)/tensor.o src\tensor\tensor.cpp
 
