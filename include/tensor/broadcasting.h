@@ -10,59 +10,178 @@
 // It's easy to support broadcasting operations for tensors or Exps.
 // But it's difficult to implement the backward of broadcasting operations.
 // To make this easier, I decide to only support broadcasting for tensors,
-// in other words, prohibit broadcasting when one of operands is Exp.
+// in other words, prohibit broadcasting when anyone of operand is Exp.
 // So some functions and classes are specialized here for Tensors.
 
 // template specialization for GradImpl.
 namespace st {
+template<typename GIType>
+class BinaryGradImpl<typename op::Add::LhsGrad, GIType, TensorImpl, TensorImpl>
+        : public GradImpl<
+            BinaryGradImpl<
+                typename op::Add::LhsGrad, GIType, TensorImpl, TensorImpl>> {
+public:
+    BinaryGradImpl(const GIType& grad, const TensorImpl& lhs, 
+                   const TensorImpl& rhs)
+            : grad_(grad), lhs_(lhs), rhs_(rhs) {
+        CHECK_EQUAL(lhs_.ndim(), rhs_.ndim(), 
+            "Backward of broadcasting is supported only when the dimensions \
+            of operands are equal, but got %dD and %dD.",
+            lhs_.ndim(), rhs_.ndim());
+    }
 
-}  // namespace st
+    IndexArray grad_size(void) const { 
+        return grad_.grad_size();
+    }
 
-// template specialization for ExpImpl.
-namespace st {
-// template<typename Op>
-// class BinaryExpImpl<Op, TensorImpl, TensorImpl>
-//         : public ExpImpl<BinaryExpImpl<Op, TensorImpl, TensorImpl>> {
-// public:
-//     BinaryExpImpl(const OperandImplPtr<TensorImpl>& lhs_ptr,
-//                   const OperandImplPtr<TensorImpl>& rhs_ptr)
-//             : lhs_ptr_(lhs_ptr, true),
-//               rhs_ptr_(rhs_ptr, true) {}
+    data_t eval(IndexArray& inds) const {
+        return op::Add::LhsGrad::map(inds, grad_, lhs_, rhs_);
+    }
+private:
+    const GIType& grad_;
+    const TensorImpl& lhs_;
+    const TensorImpl& rhs_;
+};
 
-//     index_t ndim(void) const { return Op::ndim(*lhs_ptr_, *rhs_ptr_); }
-//     index_t size(index_t idx) const { return Op::size(idx, *lhs_ptr_, *rhs_ptr_); }
+template<typename GIType>
+class BinaryGradImpl<typename op::Add::RhsGrad, GIType, TensorImpl, TensorImpl>
+        : public GradImpl<
+            BinaryGradImpl<
+                typename op::Add::RhsGrad, GIType, TensorImpl, TensorImpl>> {
+public:
+    BinaryGradImpl(const GIType& grad, const TensorImpl& lhs, 
+                   const TensorImpl& rhs)
+            : grad_(grad), lhs_(lhs), rhs_(rhs) {
+        CHECK_EQUAL(lhs_.ndim(), rhs_.ndim(), 
+            "Backward of broadcasting is supported only when the dimensions \
+            of operands are equal, but got %dD and %dD.",
+            lhs_.ndim(), rhs_.ndim());
+    }
 
-//     data_t eval(IndexArray& inds) const {
-//         return Op::map(inds, *lhs_ptr_, *rhs_ptr_);
-//     }
+    IndexArray grad_size(void) const { 
+        return grad_.grad_size();
+    }
 
-//     IndexArray size(void) const {
-//         IndexArray shape(ndim());
-//         for(index_t i = 0; i < shape.size(); ++i)
-//             shape[i] = size(i);
-//         return shape;
-//     }
+    data_t eval(IndexArray& inds) const {
+        return op::Add::RhsGrad::map(inds, grad_, lhs_, rhs_);
+    }
+private:
+    const GIType& grad_;
+    const TensorImpl& lhs_;
+    const TensorImpl& rhs_;
+};
 
-//     bool requires_grad(void) const { 
-//         return lhs_ptr_->requires_grad() || rhs_ptr_->requires_grad(); 
-//     }
+template<typename GIType>
+class BinaryGradImpl<typename op::Mul::LhsGrad, GIType, TensorImpl, TensorImpl>
+        : public GradImpl<
+            BinaryGradImpl<
+                typename op::Mul::LhsGrad, GIType, TensorImpl, TensorImpl>> {
+public:
+    BinaryGradImpl(const GIType& grad, const TensorImpl& lhs, 
+                   const TensorImpl& rhs)
+            : grad_(grad), lhs_(lhs), rhs_(rhs) {
+        CHECK_EQUAL(lhs_.ndim(), rhs_.ndim(), 
+            "Backward of broadcasting is supported only when the dimensions \
+            of operands are equal, but got %dD and %dD.",
+            lhs_.ndim(), rhs_.ndim());
+    }
 
-//     template<typename GIType>
-//     void backward(const GIType& grad) {
-//         CHECK_EQUAL(this->gradcount(), 0, "Reused ExpImpl can't be backward.");
+    IndexArray grad_size(void) const { 
+        return grad_.grad_size();
+    }
 
-//         BinaryGradImpl<typename Op::LhsGrad, GIType, TensorImpl, TensorImpl> 
-//         lhs_grad(grad, *lhs_ptr_, *rhs_ptr_);
-//         lhs_ptr_.invoke_backward(lhs_grad);
+    data_t eval(IndexArray& inds) const {
+        return op::Mul::LhsGrad::map(inds, grad_, lhs_, rhs_);
+    }
+private:
+    const GIType& grad_;
+    const TensorImpl& lhs_;
+    const TensorImpl& rhs_;
+};
 
-//         BinaryGradImpl<typename Op::RhsGrad, GIType, TensorImpl, TensorImpl> 
-//         rhs_grad(grad, *lhs_ptr_, *rhs_ptr_);
-//         rhs_ptr_.invoke_backward(rhs_grad);
-//     }
-// private:
-//     OperandImplPtr<TensorImpl> lhs_ptr_;
-//     OperandImplPtr<TensorImpl> rhs_ptr_;
-// };
+template<typename GIType>
+class BinaryGradImpl<typename op::Mul::RhsGrad, GIType, TensorImpl, TensorImpl>
+        : public GradImpl<
+            BinaryGradImpl<
+                typename op::Mul::RhsGrad, GIType, TensorImpl, TensorImpl>> {
+public:
+    BinaryGradImpl(const GIType& grad, const TensorImpl& lhs, 
+                   const TensorImpl& rhs)
+            : grad_(grad), lhs_(lhs), rhs_(rhs) {
+        CHECK_EQUAL(lhs_.ndim(), rhs_.ndim(), 
+            "Backward of broadcasting is supported only when the dimensions \
+            of operands are equal, but got %dD and %dD.",
+            lhs_.ndim(), rhs_.ndim());
+    }
+
+    IndexArray grad_size(void) const { 
+        return grad_.grad_size();
+    }
+
+    data_t eval(IndexArray& inds) const {
+        return op::Mul::RhsGrad::map(inds, grad_, lhs_, rhs_);
+    }
+private:
+    const GIType& grad_;
+    const TensorImpl& lhs_;
+    const TensorImpl& rhs_;
+};
+
+template<typename GIType>
+class BinaryGradImpl<typename op::Sub::LhsGrad, GIType, TensorImpl, TensorImpl>
+        : public GradImpl<
+            BinaryGradImpl<
+                typename op::Sub::LhsGrad, GIType, TensorImpl, TensorImpl>> {
+public:
+    BinaryGradImpl(const GIType& grad, const TensorImpl& lhs, 
+                   const TensorImpl& rhs)
+            : grad_(grad), lhs_(lhs), rhs_(rhs) {
+        CHECK_EQUAL(lhs_.ndim(), rhs_.ndim(), 
+            "Backward of broadcasting is supported only when the dimensions \
+            of operands are equal, but got %dD and %dD.",
+            lhs_.ndim(), rhs_.ndim());
+    }
+
+    IndexArray grad_size(void) const { 
+        return grad_.grad_size();
+    }
+
+    data_t eval(IndexArray& inds) const {
+        return op::Sub::LhsGrad::map(inds, grad_, lhs_, rhs_);
+    }
+private:
+    const GIType& grad_;
+    const TensorImpl& lhs_;
+    const TensorImpl& rhs_;
+};
+
+template<typename GIType>
+class BinaryGradImpl<typename op::Sub::RhsGrad, GIType, TensorImpl, TensorImpl>
+        : public GradImpl<
+            BinaryGradImpl<
+                typename op::Sub::RhsGrad, GIType, TensorImpl, TensorImpl>> {
+public:
+    BinaryGradImpl(const GIType& grad, const TensorImpl& lhs, 
+                   const TensorImpl& rhs)
+            : grad_(grad), lhs_(lhs), rhs_(rhs) {
+        CHECK_EQUAL(lhs_.ndim(), rhs_.ndim(), 
+            "Backward of broadcasting is supported only when the dimensions \
+            of operands are equal, but got %dD and %dD.",
+            lhs_.ndim(), rhs_.ndim());
+    }
+
+    IndexArray grad_size(void) const { 
+        return grad_.grad_size();
+    }
+
+    data_t eval(IndexArray& inds) const {
+        return op::Sub::RhsGrad::map(inds, grad_, lhs_, rhs_);
+    }
+private:
+    const GIType& grad_;
+    const TensorImpl& lhs_;
+    const TensorImpl& rhs_;
+};
 }  // namespace st
 
 // template specialization for op::functions.
@@ -88,30 +207,6 @@ sub(const Exp<TensorImpl>& lhs, const Exp<TensorImpl>& rhs) {
     CHECK_EXP_BROADCAST(lhs.impl(), rhs.impl());
     return binary_operation_function<Sub, TensorImpl, TensorImpl>(lhs, rhs);
 }
-
-template<>
-inline Exp<BinaryExpImpl<BatchMatrixMul, TensorImpl, TensorImpl>>
-batch_matrix_mul(const Exp<TensorImpl>& lhs, const Exp<TensorImpl>& rhs) {
-    auto& lhs_impl = lhs.impl();
-    auto& rhs_impl = rhs.impl();
-    CHECK_TRUE(lhs_impl.ndim() == 3 && rhs_impl.ndim() == 3, 
-        "Baths of Matrices expected, got %dD and %dD Tensor.", 
-        lhs_impl.ndim(), rhs_impl.ndim());
-    CHECK_TRUE(lhs_impl.size(0) == rhs_impl.size(0) 
-            || lhs_impl.size(0) == 1 
-            || rhs_impl.size(0) == 1,
-        "Bath sizes, %d and %d, doesn't match.",
-        lhs_impl.size(0), rhs_impl.size(0));
-    CHECK_EQUAL(lhs_impl.size(2), rhs_impl.size(1),
-        "Size mismatch, m1: [%d, %d], m2: [%d, %d].",
-        lhs_impl.size(1), lhs_impl.size(2), rhs_impl.size(1), rhs_impl.size(2));
-    return binary_operation_function<BatchMatrixMul, TensorImpl, TensorImpl>(lhs, rhs);
-}
 }  // namespace op
-}  // namespace st
-
-// template specialization for Tensor::backward()
-namespace st {
-
 }  // namespace st
 #endif

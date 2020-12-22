@@ -619,6 +619,59 @@ void test_img2col_operator_backward() {
     }
 }
 
+ void test_broadcasting_operator_backward(void) {
+    using namespace st;
+
+    data_t data[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
+    Tensor t0(data, Shape{1, 3, 4}, /*requires_grad=*/true);
+    Tensor t1(data, Shape{3, 1, 4}, /*requires_grad=*/true);
+
+    Tensor t2 = t0 + t1;
+    Tensor t3 = t2 * t0;
+    Tensor t4 = t3 - t1;
+    t4.backward();
+    auto&& t0_grad = t0.grad();
+    auto&& t1_grad = t1.grad();
+    data_t t0_grad_expect[][4] = {{21.0000, 30.0000, 39.0000, 48.0000}, {45.0000, 54.0000, 63.0000, 72.0000}, {69.0000, 78.0000, 87.0000, 96.0000}};
+    data_t t1_grad_expect[] = {12.0000, 15.0000, 18.0000, 21.0000};
+    for(index_t i = 0; i < 3; ++i) {
+        for(index_t j = 0; j < 4; ++j) {
+            data_t value1 = t0_grad[{0, i, j}];
+            data_t value2 = t0_grad_expect[i][j];
+            CHECK_EQUAL(value1, value2, "check1");
+
+            value1 = t1_grad[{i, 0, j}];
+            value2 = t1_grad_expect[j];
+            CHECK_EQUAL(value1, value2, "check2");
+        }
+    }
+
+    Tensor t5(data, Shape{1, 3, 1, 2, 1, 2}, true);
+    Tensor t6(data, Shape{2, 1, 3, 2, 1, 1}, true);
+    Tensor t7 = op::sigmoid(t5 + t6);
+    Tensor t8 = op::mean(t5 * t6, /*dim=*/0); 
+    Tensor t9 = op::mean(op::max(t8.squeeze(), /*dim=*/0), /*dim=*/1);
+    Tensor t10 = op::log_softmax(t9);
+    Tensor t11 = t10.view({1, 3, 1, 2, 1, 1});
+    Tensor t12 = t7 - t11;
+    t12.backward();
+    auto&& t5_grad = t5.grad();
+    auto&& t6_grad = t6.grad();
+    data_t t5_grad_expect[3][2][2] = {{{0.1255, 0.0529}, {0.0077, 0.0029}}, {{0.0029, 0.0011}, {0.0001, 0.0001}}, {{-107.3450, 107.3450}, {-125.1927, 125.1927}}};
+    data_t t6_grad_expect[2][3][2] = {{{3.0877, 2.9434}, {3.0158, 2.9923}, {3.0022, 2.9989}}, {{2.9345, 2.9341}, {2.9911, 2.9910}, {2.9988, 2.9988}}};
+    for(index_t i = 0; i < 3; ++i)
+        for(index_t j = 0; j < 2; ++j)
+            for(index_t k = 0; k < 2; ++k) {
+                data_t value1 = t5_grad[{0, i, 0, j, 0, k}];
+                data_t value2 = t5_grad_expect[i][j][k];
+                CHECK_FLOAT_EQUAL(value1, value2, "check3");
+
+                value1 = t6_grad[{j, 0, i, k, 0, 0}];
+                value2 = t6_grad_expect[j][i][k];
+                CHECK_FLOAT_EQUAL(value1, value2, "check4");
+            }
+}
+
 int main() {
     using namespace std::chrono;
 
@@ -656,6 +709,9 @@ int main() {
 
     cout << "\033[33mtest img2col operator backward...\033[0m" << endl;
     test_img2col_operator_backward();
+
+    cout << "\033[33mtest broadcasting operator backward...\033[0m" << endl;
+    test_broadcasting_operator_backward();
 
     cout << "\033[33mcheck all memory is deallocated...\033[0m" << endl;
     CHECK_TRUE(st::Alloc::all_clear(), "check memory all clear");

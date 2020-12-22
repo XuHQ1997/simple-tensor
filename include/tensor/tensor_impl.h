@@ -230,11 +230,17 @@ inline TensorImpl& TensorImpl::operator=(const TensorImpl& other) {
 
 template<typename ImplType>
 void TensorImpl::backward(const ImplType& grad) {
-    if(is_contiguous())
-        __inplacement_add(gradmeta_ptr_->grad_, shape_, stride_, grad);
-    else
-        __inplacement_add_uncontiguous(gradmeta_ptr_->grad_, shape_, stride_, grad);
-
+    // If the gradient is from a non-broadcasting operation,
+    // shape will be the same to this->shape_;
+    // Otherwise, shape will be broadcasted.
+    Shape shape(grad.grad_size());
+    if(is_contiguous() && shape == shape_) {
+        __inplacement_add(gradmeta_ptr_->grad_, shape, stride_, grad);
+    } else {
+        __inplacement_add_uncontiguous(
+            gradmeta_ptr_->grad_, shape, stride_, grad
+        );
+    }
     backward();
 }
 

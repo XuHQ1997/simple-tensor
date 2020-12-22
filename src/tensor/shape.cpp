@@ -34,6 +34,14 @@ index_t Shape::subsize(index_t start_dim) const {
     return subsize(start_dim, dims_.size());
 }
 
+bool Shape::operator==(const Shape& other) const {
+    if(this->ndim() != other.ndim()) return false;
+    index_t i = 0;
+    for(; i < dims_.size() && dims_[i] == other.dims_[i]; ++i)
+        ;
+    return i == dims_.size();
+}
+
 std::ostream& operator<<(std::ostream& out, const Shape& s) {
     out << '(' << s[0];
     for(int i = 1; i < s.ndim(); ++i)

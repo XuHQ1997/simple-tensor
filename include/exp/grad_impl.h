@@ -28,6 +28,10 @@ public:
     UnaryGradImpl(const GIType& grad, const OIType& operand)
             : grad_(grad), operand_(operand) {}
 
+    IndexArray grad_size(void) const { 
+        return operand_.size(); 
+    }
+
     data_t eval(IndexArray& inds) const {
         return Op::map(inds, grad_, operand_);
     }
@@ -43,6 +47,10 @@ public:
     BinaryGradImpl(const GIType& grad, const LhsImplType& lhs, 
                    const RhsImplType& rhs)
             : grad_(grad), lhs_(lhs), rhs_(rhs) {}
+
+    IndexArray grad_size(void) const { 
+        return Op::size(lhs_, rhs_);
+    }
 
     data_t eval(IndexArray& inds) const {
         return Op::map(inds, grad_, lhs_, rhs_);
@@ -68,6 +76,10 @@ public:
               batch_sum_exp_(batch_sum_exp),
               batch_max_cls_(batch_max_cls) {}
 
+    IndexArray grad_size(void) const { 
+        return operand_.size(); 
+    }
+
     data_t eval(IndexArray& inds) const {
         return op::LogSoftmax::Grad::map(
             inds, grad_, operand_, batch_sum_exp_, batch_max_cls_
@@ -90,6 +102,10 @@ public:
             : grad_(grad), operand_(operand),
               reduce_dim_(reduce_dim) {}
     
+    IndexArray grad_size(void) const { 
+        return operand_.size(); 
+    }
+    
     data_t eval(IndexArray& inds) const {
         return op::Mean::Grad::map(
             inds, grad_, operand_, reduce_dim_
@@ -110,7 +126,11 @@ public:
                  index_t reduce_dim)
             : grad_(grad), operand_(operand),
               reduce_dim_(reduce_dim) {}
-    
+
+    IndexArray grad_size(void) const { 
+        return operand_.size(); 
+    }
+
     data_t eval(IndexArray& inds) const {
         return op::Max::Grad::map(
             inds, grad_, operand_, reduce_dim_
@@ -131,7 +151,11 @@ public:
                   const index_t* batch_label)
             : grad_(grad), operand_(operand),
               batch_label_(batch_label) {}
-    
+
+    IndexArray grad_size(void) const { 
+        return operand_.size(); 
+    }
+
     data_t eval(IndexArray& inds) const {
         return op::NLLLoss::Grad::map(
             inds, grad_, operand_, batch_label_
@@ -157,6 +181,10 @@ public:
               kernel_size_(kernel_size), stride_size_(stride_size),
               padding_size_(padding_size), out_size_(out_size) {}
     
+    IndexArray grad_size(void) const { 
+        return operand_.size(); 
+    }
+
     data_t eval(IndexArray& inds) const {
         return op::Img2col::Grad::map(
             inds, grad_, operand_, kernel_size_, stride_size_,
@@ -178,14 +206,19 @@ template<>
 class UnaryGradImpl<op::Constant, void, data_t>
         : public GradImpl<UnaryGradImpl<op::Constant, void, data_t>> {
 public:    
-    UnaryGradImpl(data_t value)
-            : value_(value) {}
+    UnaryGradImpl(data_t value, const IndexArray& shape)
+            : value_(value),  shape_(shape) {}
+
+    IndexArray grad_size(void) const { 
+        return shape_;
+    }
 
     data_t eval(IndexArray& inds) const {
         return op::Constant::map(inds, value_);
     }
 private:
     data_t value_;
+    IndexArray shape_;
 };
 
 }  // namespace st

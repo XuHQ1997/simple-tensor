@@ -76,6 +76,11 @@ struct MatrixMul {
             }
             return value;
         }
+
+        template<typename LhsType, typename RhsType>
+        static IndexArray size(const LhsType& lhs, const RhsType& rhs) {
+            return lhs.size();
+        }
     };
 
     struct RhsGrad {
@@ -93,6 +98,11 @@ struct MatrixMul {
                 value += lhs.eval(lhs_inds) * grad.eval(grad_inds);
             }
             return value;
+        }
+
+        template<typename LhsType, typename RhsType>
+        static IndexArray size(const LhsType& lhs, const RhsType& rhs) {
+            return rhs.size();
         }
     };
 };
@@ -172,6 +182,11 @@ struct BatchMatrixMul {
             }
             return value;
         }
+
+        template<typename LhsType, typename RhsType>
+        static IndexArray size(const LhsType& lhs, const RhsType& rhs) {
+            return lhs.size();
+        }
     };
 
     struct RhsGrad {
@@ -189,6 +204,11 @@ struct BatchMatrixMul {
                 value += lhs.eval(lhs_inds) * grad.eval(grad_inds);
             }
             return value;
+        }
+
+        template<typename LhsType, typename RhsType>
+        static IndexArray size(const LhsType& lhs, const RhsType& rhs) {
+            return rhs.size();
         }
     };
 };

@@ -26,11 +26,13 @@ public:
     index_t dsize() const;
     index_t subsize(index_t start_dim, index_t end_dim) const;
     index_t subsize(index_t start_dim) const;
+    bool operator==(const Shape& other) const;
 
     // inline function
     index_t ndim(void) const { return dims_.size(); }
     index_t operator[](index_t idx) const { return dims_[idx]; }
     index_t& operator[](index_t idx) { return dims_[idx]; }
+    operator const IndexArray() const { return dims_; }
 
     // friend function
     friend std::ostream& operator<<(std::ostream& out, const Shape& s);

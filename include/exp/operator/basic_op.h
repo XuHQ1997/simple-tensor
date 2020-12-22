@@ -57,6 +57,11 @@ struct Add : public BinaryBasicOperator {
                           const LhsType& lhs, const RhsType& rhs) {
             return grad.eval(inds);
         }
+
+        template<typename LhsType, typename RhsType>
+        static IndexArray size(const LhsType& lhs, const RhsType& rhs) {
+            return lhs.size();
+        }
     };
 
     struct RhsGrad {
@@ -64,6 +69,11 @@ struct Add : public BinaryBasicOperator {
         static data_t map(IndexArray& inds, const GradType& grad,
                           const LhsType& lhs, const RhsType& rhs) {
             return grad.eval(inds);
+        }
+
+        template<typename LhsType, typename RhsType>
+        static IndexArray size(const LhsType& lhs, const RhsType& rhs) {
+            return rhs.size();
         }
     };
 };
@@ -80,6 +90,11 @@ struct Mul : public BinaryBasicOperator {
                           const LhsType& lhs, const RhsType& rhs) {
             return grad.eval(inds) * rhs.eval(inds);
         }
+
+        template<typename LhsType, typename RhsType>
+        static IndexArray size(const LhsType& lhs, const RhsType& rhs) {
+            return lhs.size();
+        }
     };
 
     struct RhsGrad {
@@ -87,6 +102,11 @@ struct Mul : public BinaryBasicOperator {
         static data_t map(IndexArray& inds, const GradType& grad,
                           const LhsType& lhs, const RhsType& rhs) {
             return grad.eval(inds) * lhs.eval(inds);
+        }
+
+        template<typename LhsType, typename RhsType>
+        static IndexArray size(const LhsType& lhs, const RhsType& rhs) {
+            return rhs.size();
         }
     };
 };
@@ -103,6 +123,11 @@ struct Sub : public BinaryBasicOperator{
                           const LhsType& lhs, const RhsType& rhs) {
             return grad.eval(inds);
         }
+        
+        template<typename LhsType, typename RhsType>
+        static IndexArray size(const LhsType& lhs, const RhsType& rhs) {
+            return lhs.size();
+        }
     };
 
     struct RhsGrad {
@@ -110,6 +135,11 @@ struct Sub : public BinaryBasicOperator{
         static data_t map(IndexArray& inds, const GradType& grad,
                           const LhsType& lhs, const RhsType& rhs) {
             return -grad.eval(inds);
+        }
+
+        template<typename LhsType, typename RhsType>
+        static IndexArray size(const LhsType& lhs, const RhsType& rhs) {
+            return rhs.size();
         }
     };
 };

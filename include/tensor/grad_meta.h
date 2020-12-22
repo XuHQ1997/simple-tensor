@@ -36,7 +36,9 @@ struct GradFn {
             return storage_[offset];
         }
 
-        const Shape& grad_shape(void) const { return shape_; }
+        IndexArray grad_size(void) const { 
+            return static_cast<IndexArray>(shape_); 
+        }
     };
 };
 
