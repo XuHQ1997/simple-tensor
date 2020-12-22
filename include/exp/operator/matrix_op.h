@@ -22,7 +22,9 @@ struct MatrixTranspose {
     template<typename OperandType>
     static data_t map(IndexArray& inds, const OperandType& operand) {
         std::swap(inds[0], inds[1]);
-        return operand.eval(inds);
+        data_t value = operand.eval(inds);
+        std::swap(inds[0], inds[1]);
+        return value;
     }
 
     struct Grad {
@@ -30,7 +32,9 @@ struct MatrixTranspose {
         static data_t map(IndexArray& inds, const GradType& grad, 
                           const OperandType& operand) {
             std::swap(inds[0], inds[1]);
-            return grad.eval(inds);
+            data_t value = grad.eval(inds);
+            std::swap(inds[0], inds[1]);
+            return value;
         }
     };
 };

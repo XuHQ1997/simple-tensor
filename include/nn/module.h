@@ -2,15 +2,16 @@
 #define NN_MODULE_H
 
 #include <string>
+#include <vector>
 #include <unordered_map>
-#include <initializer_list>
 
 #include "tensor/tensor.h"
 
 namespace st {
 namespace nn {
 
-using ParamsDict = std::unordered_map<std::string, Tensor&>;
+// using ParamsDict = std::unordered_map<std::string, Tensor&>;
+using ParamsDict = std::vector<std::pair<std::string, Tensor&>>;
 
 class Module {
 public:
