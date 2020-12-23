@@ -61,6 +61,7 @@ struct Add : public BinaryBasicOperator {
         using allow_broadcast = std::true_type;
 
         struct Lhs {
+            using allow_broadcast = allow_broadcast;
             using is_lhs = std::true_type;
             using is_rhs = std::false_type;
 
@@ -77,6 +78,7 @@ struct Add : public BinaryBasicOperator {
         };
 
         struct Rhs {
+            using allow_broadcast = allow_broadcast;
             using is_lhs = std::false_type;
             using is_rhs = std::true_type;
 
@@ -104,6 +106,7 @@ struct Mul : public BinaryBasicOperator {
         using allow_broadcast = std::true_type;
 
         struct Lhs {
+            using allow_broadcast = allow_broadcast;
             using is_lhs = std::true_type;
             using is_rhs = std::false_type;
 
@@ -120,6 +123,7 @@ struct Mul : public BinaryBasicOperator {
         };
 
         struct Rhs {
+            using allow_broadcast = allow_broadcast;
             using is_lhs = std::false_type;
             using is_rhs = std::true_type;
 
@@ -147,6 +151,7 @@ struct Sub : public BinaryBasicOperator{
         using allow_broadcast = std::true_type;
 
         struct Lhs {
+            using allow_broadcast = allow_broadcast;
             using is_lhs = std::true_type;
             using is_rhs = std::false_type;
 
@@ -163,6 +168,7 @@ struct Sub : public BinaryBasicOperator{
         };
 
         struct Rhs {
+            using allow_broadcast = allow_broadcast;
             using is_lhs = std::false_type;
             using is_rhs = std::true_type;
 

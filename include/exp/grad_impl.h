@@ -13,7 +13,6 @@
 #include "exp/operator/conv.h"
 
 namespace st {
-
 // GradImpl is the template expression used in backward
 template<typename ImplType>
 class GradImpl {
@@ -23,19 +22,44 @@ public:
     }
 };
 
+template<typename Op, typename GIType, typename OIType>
+typename std::enable_if<Op::allow_broadcast::value,
+                        IndexArray>::type
+__grad_size(const GIType& grad, const OIType& operand) {
+    return grad.grad_size();
+}
+
+template<typename Op, typename GIType, typename OIType>
+typename std::enable_if<!Op::allow_broadcast::value,
+                        IndexArray>::type
+__grad_size(const GIType& grad, const OIType& operand) {
+    return operand.size();
+}
+
 template<typename Op, typename GIType, typename LhsType, typename RhsType>
-typename std::enable_if<Op::is_lhs::value, IndexArray>::type
+typename std::enable_if<Op::allow_broadcast::value, 
+                        IndexArray>::type
+__grad_size(const GIType& grad, const LhsType& lhs, const RhsType& rhs) {
+    return grad.grad_size();
+}
+
+template<typename Op, typename GIType, typename LhsType, typename RhsType>
+typename std::enable_if<!Op::allow_broadcast::value && Op::is_lhs::value,
+                        IndexArray>::type
 __grad_size(const GIType& grad, const LhsType& lhs, const RhsType& rhs) {
     return lhs.size();
 }
 
 template<typename Op, typename GIType, typename LhsType, typename RhsType>
-typename std::enable_if<Op::is_rhs::value, IndexArray>::type
+typename std::enable_if<!Op::allow_broadcast::value && Op::is_rhs::value, 
+                        IndexArray>::type
 __grad_size(const GIType& grad, const LhsType& lhs, const RhsType& rhs) {
     return rhs.size();
 }
+}  // namespace st
 
-// OIType = OperandImplType; GIType = GradImplType
+
+namespace st {
 template<typename Op, typename GIType, typename OIType>
 class UnaryGradImpl : public GradImpl<UnaryGradImpl<Op, GIType, OIType>>{
 public:
@@ -43,7 +67,9 @@ public:
             : grad_(grad), operand_(operand) {}
 
     IndexArray grad_size(void) const { 
-        return operand_.size(); 
+        return __grad_size<Op, GIType, OIType>(
+            grad_, operand_
+        );
     }
 
     data_t eval(IndexArray& inds) const {
@@ -94,7 +120,9 @@ public:
               batch_max_cls_(batch_max_cls) {}
 
     IndexArray grad_size(void) const { 
-        return operand_.size(); 
+        return __grad_size<typename op::LogSoftmax::Grad, GIType, OIType>(
+            grad_, operand_
+        );
     }
 
     data_t eval(IndexArray& inds) const {
@@ -120,7 +148,9 @@ public:
               reduce_dim_(reduce_dim) {}
     
     IndexArray grad_size(void) const { 
-        return operand_.size(); 
+        return __grad_size<typename op::Mean::Grad, GIType, OIType>(
+            grad_, operand_
+        );
     }
     
     data_t eval(IndexArray& inds) const {
@@ -145,7 +175,9 @@ public:
               reduce_dim_(reduce_dim) {}
 
     IndexArray grad_size(void) const { 
-        return operand_.size(); 
+        return __grad_size<typename op::Max::Grad, GIType, OIType>(
+            grad_, operand_
+        );
     }
 
     data_t eval(IndexArray& inds) const {
@@ -170,7 +202,9 @@ public:
               batch_label_(batch_label) {}
 
     IndexArray grad_size(void) const { 
-        return operand_.size(); 
+        return __grad_size<typename op::NLLLoss::Grad, GIType, OIType>(
+            grad_, operand_
+        );
     }
 
     data_t eval(IndexArray& inds) const {
@@ -199,7 +233,9 @@ public:
               padding_size_(padding_size), out_size_(out_size) {}
     
     IndexArray grad_size(void) const { 
-        return operand_.size(); 
+        return __grad_size<typename op::Img2col::Grad, GIType, OIType>(
+            grad_, operand_
+        );
     }
 
     data_t eval(IndexArray& inds) const {
