@@ -751,11 +751,39 @@ void test_linear_module(void) {
          {0.735467, 0.036351, 0.184947, 0.862948, 0.818394}};
     Tensor input(reinterpret_cast<data_t*>(input_data), Shape{3, 5});
 
-    Tensor output = linear.forward(input);
-    cout << output << endl;
-    output.backward();
-    cout << weight.grad() << endl;
-    cout << bias.grad() << endl;
+    Tensor linear_out = linear.forward(input);
+    Tensor out = op::log_softmax(linear_out);
+    out.backward();
+
+    data_t out_expect[3][6] = {{-1.892938, -1.590033, -1.914817, -1.775882, -1.914817, -1.707157},
+                               {-1.672153, -1.522798, -1.954868, -1.795545, -1.954868, -1.932030},
+                               {-1.929682, -1.472234, -1.956825, -1.839288, -1.956825, -1.693635}};
+    for(index_t i = 0; i < 3; ++i)
+        for(index_t j = 0; j < 6; ++j) {
+            data_t value1 = out[{i, j}];
+            data_t value2 = out_expect[i][j];
+            CHECK_FLOAT_EQUAL(value1, value2, "check1");
+        }
+    data_t weight_grad_expect[6][5] = {{0.099457, -0.009920, -0.002108, 0.106735, 0.010422},
+                                       {-0.505351, -0.081136, -0.173833, -0.514122, -0.659705},
+                                       {0.000000, 0.000000, 0.000000, 0.000000, 0.000000},
+                                       {0.027103, 0.001202, 0.008172, 0.035058, 0.037341},
+                                       {0.000000, 0.000000, 0.000000, 0.000000, 0.000000},
+                                       {-0.074985, 0.012053, 0.008624, -0.080164, 0.016362}};
+    auto&& weight_grad = weight.grad();
+    for(index_t i = 0; i < 6; ++i) 
+        for(index_t j = 0; j < 5; ++j) {
+            data_t value1 = weight_grad[{i, j}];
+            data_t value2 = weight_grad_expect[i][j];
+            CHECK_FLOAT_EQUAL(value1, value2, "check2");
+        }
+    data_t bias_grad_expect[6] = {0.098009, -0.908593, 0.000000, 0.034192, 0.000000, -0.060508};
+    auto&& bias_grad = bias.grad();
+    for(index_t i = 0; i < 6; ++i) {
+        data_t value1 = bias_grad[{0, i}];
+        data_t value2 = bias_grad_expect[i];
+        CHECK_FLOAT_EQUAL(value1, value2, "check3");
+    }
 }
 
 int main() {
