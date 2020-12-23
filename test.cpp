@@ -216,9 +216,9 @@ void test_basic_operator() {
     Tensor t6 = t1.view({2, 1, 1, 2, 3});
     Tensor t7 = t1.view({2, 2, 1, 1, 3});
     Tensor t8 = t1.view({2, 2, 3});
-    Tensor exp1 = t6 + t7;
-    Tensor exp2 = -(t6 * t8);
-    Tensor exp3 = t6 - t8;
+    auto exp1 = t6 + t7;
+    auto exp2 = -(t6 * t8);
+    auto exp3 = t6 - t8;
     Tensor t9 = exp1 + exp2 + exp3;
     for(index_t i = 0; i < 2; ++i)
         for(index_t j = 0; j < 2; ++j)
@@ -648,12 +648,12 @@ void test_img2col_operator_backward() {
 
     Tensor t5(data, Shape{1, 3, 1, 2, 1, 2}, true);
     Tensor t6(data, Shape{2, 1, 3, 2, 1, 1}, true);
-    Tensor t7 = op::sigmoid(t5 + t6);
+    Tensor t7 = t5 + op::sigmoid(t5 + op::relu(t6));
     Tensor t8 = op::mean(t5 * t6, /*dim=*/0); 
     Tensor t9 = op::mean(op::max(t8.squeeze(), /*dim=*/0), /*dim=*/1);
     Tensor t10 = op::log_softmax(t9);
     Tensor t11 = t10.view({1, 3, 1, 2, 1, 1});
-    Tensor t12 = t7 - t11;
+    Tensor t12 = t7 - t5 - t11;
     t12.backward();
     auto&& t5_grad = t5.grad();
     auto&& t6_grad = t6.grad();

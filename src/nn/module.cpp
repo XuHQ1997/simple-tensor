@@ -1,3 +1,4 @@
+#include "exp/function.h"
 #include "nn/module.h"
 
 namespace st {
@@ -8,10 +9,11 @@ Linear::Linear(index_t in_features, index_t out_features)
     {}
 
 Tensor Linear::forward(const Tensor& x) {
-    Tensor y = op::matrix_mul(
+    Tensor y1 = op::matrix_mul(
         x, op::matrix_transpose(weight_)
-    ) + bias_;
-    return y;
+    );
+    Tensor y2 = y1 + bias_;
+    return y2;
 }
 
 ParamsDict Linear::parameters(void) {
@@ -26,10 +28,11 @@ LinearWithReLU::LinearWithReLU(index_t in_features, index_t out_features)
     {}
 
 Tensor LinearWithReLU::forward(const Tensor& x) {
-    Tensor y = op::relu(op::matrix_mul(
+    Tensor y1 = op::matrix_mul(
         x, op::matrix_transpose(weight_)
-    ) + bias_);
-    return y;
+    );
+    Tensor y2 = op::relu(y1 + bias_);
+    return y2;
 }
 }  // namespace nn
 }  // namespace st

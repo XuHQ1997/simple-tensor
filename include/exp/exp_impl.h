@@ -94,6 +94,9 @@ template<typename Op, typename OIType>  // OIType = OperandImplType
 class UnaryExpImpl 
         : public ExpImpl<UnaryExpImpl<Op, OIType>> {
 public:
+    using op = Op;
+    using operand_type = OIType;
+
     explicit UnaryExpImpl(const OperandImplPtr<OIType>& ptr)
             : operand_ptr_(ptr, true) {}
 
@@ -130,6 +133,10 @@ template<typename Op, typename LhsImplType, typename RhsImplType>
 class BinaryExpImpl
         : public ExpImpl<BinaryExpImpl<Op, LhsImplType, RhsImplType>> {
 public:
+    using op = Op;
+    using lhs_type = LhsImplType;
+    using rhs_type = RhsImplType;
+
     BinaryExpImpl(const OperandImplPtr<LhsImplType>& lhs_ptr,
                   const OperandImplPtr<RhsImplType>& rhs_ptr)
             : lhs_ptr_(lhs_ptr, true),
@@ -186,6 +193,9 @@ template<typename OIType>
 class UnaryExpImpl<op::LogSoftmax, OIType>
         : public ExpImpl<UnaryExpImpl<op::LogSoftmax, OIType>> {
 public:
+    using op = op::LogSoftmax;
+    using operand_type = OIType;
+
     explicit UnaryExpImpl(const OperandImplPtr<OIType>& ptr)
             : operand_ptr_(ptr, true),
               n_batch_(operand_ptr_->size(0)),
@@ -235,6 +245,9 @@ template<typename OIType>
 class UnaryExpImpl<op::Mean, OIType>
         : public ExpImpl<UnaryExpImpl<op::Mean, OIType>> {
 public:
+    using op = op::Mean;
+    using operand_type = OIType;
+
     explicit UnaryExpImpl(const OperandImplPtr<OIType>& ptr, index_t reduce_dim)
             : operand_ptr_(ptr, true),
               reduce_dim_(reduce_dim) {}
@@ -276,6 +289,9 @@ template<typename OIType>
 class UnaryExpImpl<op::Max, OIType>
         : public ExpImpl<UnaryExpImpl<op::Max, OIType>> {
 public:
+    using op = op::Max;
+    using operand_type = OIType;
+
     explicit UnaryExpImpl(const OperandImplPtr<OIType>& ptr, index_t reduce_dim)
             : operand_ptr_(ptr, true),
               reduce_dim_(reduce_dim) {}
@@ -317,6 +333,9 @@ template<typename OIType>
 class UnaryExpImpl<op::Argmax, OIType>
         : public ExpImpl<UnaryExpImpl<op::Argmax, OIType>> {
 public:
+    using op = op::Argmax;
+    using operand_type = OIType;
+
     explicit UnaryExpImpl(const OperandImplPtr<OIType>& ptr, index_t reduce_dim)
             : operand_ptr_(ptr, true),
               reduce_dim_(reduce_dim) {}
@@ -352,6 +371,9 @@ template<typename OIType>
 class UnaryExpImpl<op::NLLLoss, OIType>
         : public ExpImpl<UnaryExpImpl<op::NLLLoss, OIType>> {
 public:
+    using op = op::NLLLoss;
+    using operand_type = OIType;
+
     explicit UnaryExpImpl(const OperandImplPtr<OIType>& ptr,
                           const std::shared_ptr<index_t>& batch_label)
             : operand_ptr_(ptr, true),
@@ -390,6 +412,9 @@ template<typename OIType>
 class UnaryExpImpl<op::Img2col, OIType>
         : public ExpImpl<UnaryExpImpl<op::Img2col, OIType>> {
 public:
+    using op = op::Img2col;
+    using operand_type = OIType;
+
     UnaryExpImpl(const OperandImplPtr<OIType>& ptr,
                  const op::Img2col::Wsize& kernel_size,
                  const op::Img2col::Wsize& stride_size,
@@ -452,6 +477,9 @@ template<typename OIType>
 class UnaryExpImpl<op::MaxPool2d, OIType>
         : public ExpImpl<UnaryExpImpl<op::MaxPool2d, OIType>> {
 public:
+    using op = op::MaxPool2d;
+    using operand_type = OIType;
+
     UnaryExpImpl(const OperandImplPtr<OIType>& ptr,
                  const op::MaxPool2d::Wsize& kernel_size,
                  const op::MaxPool2d::Wsize& stride_size,
@@ -502,6 +530,9 @@ template<>
 class UnaryExpImpl<op::Constant, data_t>
         : public ExpImpl<UnaryExpImpl<op::Constant, data_t>> {
 public:
+    using op = op::Constant;
+    using operand_type = data_t;
+
     UnaryExpImpl(data_t value, IndexArray&& size) 
             : value_(value), shape_(std::move(size)) {}
 

@@ -225,6 +225,24 @@ struct Sigmoid: public UnaryBasicOperator {
     };
 };
 
+struct Identity : public UnaryBasicOperator {
+    template<typename OperandType>
+    static data_t map(IndexArray& inds, const OperandType& operand) {
+        return operand.eval(inds);
+    }
+
+    struct Grad {
+        using allow_broadcast = std::true_type;
+        using is_lhs = std::false_type;
+        using is_rhs = std::false_type;
+
+        template<typename GradType, typename OperandType>
+        static data_t map(IndexArray& inds, const GradType& grad,
+                          const OperandType& operand) {
+            return grad.eval(inds);
+        }
+    };
+};
 }  // namespace op
 }  // namespace st
 #endif

@@ -82,6 +82,4 @@ template<typename ImplType> Tensor& Tensor::operator+=(const Exp<ImplType>& exp)
 }
 
 }  // namespace st
-
-#include "tensor/broadcasting.h"
 #endif

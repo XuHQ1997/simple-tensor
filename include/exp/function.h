@@ -1,6 +1,8 @@
 #ifndef EXP_FUNCTION_H
 #define EXP_FUNCTION_H
 
+#include <type_traits>
+
 #include "utils/allocator.h"
 #include "utils/exception.h"
 #include "exp/exp_impl.h"
@@ -21,7 +23,7 @@ namespace op {
 
 template<typename Op, typename OIType>  // OIType = OperandImplType
 Exp<UnaryExpImpl<Op, OIType>> 
-unary_operation_function(const Exp<OIType>& operand) {
+__unary_operation_function(const Exp<OIType>& operand) {
     return Exp<UnaryExpImpl<Op, OIType>>(
         Alloc::unique_construct<UnaryExpImpl<Op, OIType>>(
             operand.impl_ptr()
@@ -31,7 +33,7 @@ unary_operation_function(const Exp<OIType>& operand) {
 
 template<typename Op, typename LhsImplType, typename RhsImplType>
 Exp<BinaryExpImpl<Op, LhsImplType, RhsImplType>>
-binary_operation_function(const Exp<LhsImplType>& lhs, const Exp<RhsImplType>& rhs) {
+__binary_operation_function(const Exp<LhsImplType>& lhs, const Exp<RhsImplType>& rhs) {
     return Exp<BinaryExpImpl<Op, LhsImplType, RhsImplType>>(
         Alloc::unique_construct<BinaryExpImpl<Op, LhsImplType, RhsImplType>>(
             lhs.impl_ptr(), rhs.impl_ptr()
@@ -39,11 +41,27 @@ binary_operation_function(const Exp<LhsImplType>& lhs, const Exp<RhsImplType>& r
     );
 }
 
+template<typename LhsImplType, typename RhsImplType>
+typename std::enable_if<LhsImplType::op::Grad::allow_broadcast::value 
+                     && RhsImplType::op::Grad::allow_broadcast::value,
+                        void>::type
+__check_broadcast(const LhsImplType& lhs, const RhsImplType& rhs) {
+    CHECK_EXP_BROADCAST(lhs, rhs);
+}
+
+template<typename LhsImplType, typename RhsImplType>
+typename std::enable_if<!(LhsImplType::op::Grad::allow_broadcast::value 
+                       && RhsImplType::op::Grad::allow_broadcast::value),
+                        void>::type
+__check_broadcast(const LhsImplType& lhs, const RhsImplType& rhs) {
+    CHECK_EXP_SAME_SHAPE(lhs, rhs);
+}
+
 // function for basic operation
 template<typename OIType>
 Exp<UnaryExpImpl<Minus, OIType>>
 minus(const Exp<OIType>& operand) {
-    return unary_operation_function<Minus, OIType>(operand);
+    return __unary_operation_function<Minus, OIType>(operand);
 }
 template<typename OIType>
 Exp<UnaryExpImpl<Minus, OIType>> 
@@ -54,8 +72,8 @@ operator-(const Exp<OIType>& operand) {
 template<typename LhsImplType, typename RhsImplType>
 Exp<BinaryExpImpl<Add, LhsImplType, RhsImplType>>
 add(const Exp<LhsImplType>& lhs, const Exp<RhsImplType>& rhs) {
-    CHECK_EXP_SAME_SHAPE(lhs.impl(), rhs.impl());
-    return binary_operation_function<Add, LhsImplType, RhsImplType>(lhs, rhs);
+    __check_broadcast(lhs.impl(), rhs.impl());
+    return __binary_operation_function<Add, LhsImplType, RhsImplType>(lhs, rhs);
 }
 template<typename LhsImplType, typename RhsImplType>
 Exp<BinaryExpImpl<Add, LhsImplType, RhsImplType>>
@@ -66,8 +84,8 @@ operator+(const Exp<LhsImplType>& lhs, const Exp<RhsImplType>& rhs) {
 template<typename LhsImplType, typename RhsImplType>
 Exp<BinaryExpImpl<Mul, LhsImplType, RhsImplType>>
 mul(const Exp<LhsImplType>& lhs, const Exp<RhsImplType>& rhs) {
-    CHECK_EXP_SAME_SHAPE(lhs.impl(), rhs.impl());
-    return binary_operation_function<Mul, LhsImplType, RhsImplType>(lhs, rhs);
+    __check_broadcast(lhs.impl(), rhs.impl());
+    return __binary_operation_function<Mul, LhsImplType, RhsImplType>(lhs, rhs);
 }
 template<typename LhsImplType, typename RhsImplType>
 Exp<BinaryExpImpl<Mul, LhsImplType, RhsImplType>>
@@ -78,8 +96,8 @@ operator*(const Exp<LhsImplType>& lhs, const Exp<RhsImplType>& rhs) {
 template<typename LhsImplType, typename RhsImplType>
 Exp<BinaryExpImpl<Sub, LhsImplType, RhsImplType>>
 sub(const Exp<LhsImplType>& lhs, const Exp<RhsImplType>& rhs) {
-    CHECK_EXP_SAME_SHAPE(lhs.impl(), rhs.impl());
-    return binary_operation_function<Sub, LhsImplType, RhsImplType>(lhs, rhs);
+    __check_broadcast(lhs.impl(), rhs.impl());
+    return __binary_operation_function<Sub, LhsImplType, RhsImplType>(lhs, rhs);
 }
 template<typename LhsImplType, typename RhsImplType>
 Exp<BinaryExpImpl<Sub, LhsImplType, RhsImplType>>
@@ -90,13 +108,13 @@ operator-(const Exp<LhsImplType>& lhs, const Exp<RhsImplType>& rhs) {
 template<typename OIType>
 Exp<UnaryExpImpl<ReLU, OIType>>
 relu(const Exp<OIType>& operand) {
-    return unary_operation_function<ReLU, OIType>(operand);
+    return __unary_operation_function<ReLU, OIType>(operand);
 }
 
 template<typename OIType>
 Exp<UnaryExpImpl<Sigmoid, OIType>>
 sigmoid(const Exp<OIType>& operand) {
-    return unary_operation_function<Sigmoid, OIType>(operand);
+    return __unary_operation_function<Sigmoid, OIType>(operand);
 }
 
 // function for matrix operation
@@ -106,7 +124,7 @@ matrix_transpose(const Exp<OIType>& operand) {
     CHECK_EQUAL(operand.impl().ndim(), 2,
         "Matrix Transpose is only supported for 2D Tensor, but got %dD one",
         operand.impl().ndim());
-    return unary_operation_function<MatrixTranspose, OIType>(operand);
+    return __unary_operation_function<MatrixTranspose, OIType>(operand);
 }
 
 template<typename OIType>
@@ -115,7 +133,7 @@ batch_matrix_transpose(const Exp<OIType>& operand) {
     CHECK_EQUAL(operand.impl().ndim(), 3,
         "Batch Matrix Transpose is only supported for 3D Tensor, but got %dD one",
         operand.impl().ndim());
-    return unary_operation_function<BatchMatrixTranspose, OIType>(operand);
+    return __unary_operation_function<BatchMatrixTranspose, OIType>(operand);
 }
 
 template<typename LhsImplType, typename RhsImplType>
@@ -129,7 +147,7 @@ matrix_mul(const Exp<LhsImplType>& lhs, const Exp<RhsImplType>& rhs) {
     CHECK_EQUAL(lhs_impl.size(1), rhs_impl.size(0), 
         "Size mismatch, m1: [%d, %d], m2: [%d, %d].",
         lhs_impl.size(0), lhs_impl.size(1), rhs_impl.size(0), rhs_impl.size(1));
-    return binary_operation_function<MatrixMul, LhsImplType, RhsImplType>(lhs, rhs);
+    return __binary_operation_function<MatrixMul, LhsImplType, RhsImplType>(lhs, rhs);
 }
 
 template<typename LhsImplType, typename RhsImplType>
@@ -146,7 +164,7 @@ batch_matrix_mul(const Exp<LhsImplType>& lhs, const Exp<RhsImplType>& rhs) {
     CHECK_EQUAL(lhs_impl.size(2), rhs_impl.size(1),
         "Size mismatch, m1: [%d, %d], m2: [%d, %d].",
         lhs_impl.size(1), lhs_impl.size(2), rhs_impl.size(1), rhs_impl.size(2));
-    return binary_operation_function<BatchMatrixMul, LhsImplType, RhsImplType>(lhs, rhs);
+    return __binary_operation_function<BatchMatrixMul, LhsImplType, RhsImplType>(lhs, rhs);
 }
 
 // function for log_softmax
@@ -156,7 +174,7 @@ log_softmax(const Exp<OIType>& operand) {
     CHECK_EQUAL(operand.impl().ndim(), 2, 
         "log_softmax Only supported for 2D Tensor, but got a %dD one", 
         operand.impl().ndim());
-    return unary_operation_function<LogSoftmax, OIType>(operand);
+    return __unary_operation_function<LogSoftmax, OIType>(operand);
 }
 
 
@@ -277,7 +295,7 @@ max_pool2d(const Exp<OIType>& operand, const MaxPool2d::Wsize& kernel_size,
 }
 
 inline Exp<UnaryExpImpl<Constant, data_t>>
-constant(data_t value, IndexArray&& size=IndexArray{1}) {
+constant(data_t value, IndexArray&& size) {
     return Exp<UnaryExpImpl<Constant, data_t>>(
         Alloc::unique_construct<UnaryExpImpl<Constant, data_t>>(
             value, std::move(size)

@@ -17,9 +17,16 @@ struct AutoGradMeta;
 namespace nn {
     class InitializerBase;
 }
+namespace op {
+    struct Identity;
+}
 
 class TensorImpl : public ExpImpl<TensorImpl> {
 public:
+    // To be consistent with UnaryImpl
+    using op = op::Identity;
+    using operand_type = TensorImpl;
+
     // constructor
     TensorImpl(const Storage& storage, const Shape& shape, const IndexArray& stride,
                bool requires_grad=false);

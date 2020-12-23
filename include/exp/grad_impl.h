@@ -5,6 +5,7 @@
 
 #include "utils/base_config.h"
 #include "utils/array.h"
+#include "utils/exception.h"
 
 #include "exp/operator/log_softmax.h"
 #include "exp/operator/constant.h"
@@ -40,6 +41,10 @@ template<typename Op, typename GIType, typename LhsType, typename RhsType>
 typename std::enable_if<Op::allow_broadcast::value, 
                         IndexArray>::type
 __grad_size(const GIType& grad, const LhsType& lhs, const RhsType& rhs) {
+    CHECK_EQUAL(lhs.ndim(), rhs.ndim(), 
+        "Backward of broadcasting is supported only when the dimensions \
+        of operands are equal, but got %dD and %dD.",
+        lhs.ndim(), rhs.ndim());
     return grad.grad_size();
 }
 
