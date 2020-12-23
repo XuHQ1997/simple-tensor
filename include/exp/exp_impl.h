@@ -157,11 +157,11 @@ public:
     void backward(const GIType& grad) {
         CHECK_EQUAL(this->gradcount(), 0, "Reused ExpImpl can't be backward.");
 
-        BinaryGradImpl<typename Op::LhsGrad, GIType, LhsImplType, RhsImplType> 
+        BinaryGradImpl<typename Op::Grad::Lhs, GIType, LhsImplType, RhsImplType> 
         lhs_grad(grad, *lhs_ptr_, *rhs_ptr_);
         lhs_ptr_.invoke_backward(lhs_grad);
         
-        BinaryGradImpl<typename Op::RhsGrad, GIType, LhsImplType, RhsImplType> 
+        BinaryGradImpl<typename Op::Grad::Rhs, GIType, LhsImplType, RhsImplType> 
         rhs_grad(grad, *lhs_ptr_, *rhs_ptr_);
         rhs_ptr_.invoke_backward(rhs_grad);
     }

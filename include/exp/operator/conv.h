@@ -4,6 +4,7 @@
 #include <utility>
 #include <algorithm>
 #include <iostream>
+#include <type_traits>
 
 #include "utils/base_config.h"
 
@@ -60,6 +61,10 @@ struct Img2col {
     }
 
     struct Grad {
+        using allow_broadcast = std::false_type;
+        using is_lhs = std::false_type;
+        using is_rhs = std::false_type;
+
         template<typename GradType, typename OperandType>
         static data_t map(IndexArray& inds, const GradType& grad, 
                           const OperandType& operand, const Wsize& kernel_size, 
@@ -169,6 +174,17 @@ struct MaxPool2d {
 
         return max_value;
     }
+
+    struct Grad {
+        using allow_broadcast = std::false_type;
+        using is_lhs = std::false_type;
+        using is_rhs = std::false_type;
+
+        static data_t map(IndexArray& inds, data_t value) {
+            THROW_ERROR("NotImplementError");
+            return 0;
+        }
+    };
 };
 
 }  // namespace op

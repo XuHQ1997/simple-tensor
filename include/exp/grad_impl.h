@@ -1,6 +1,8 @@
 #ifndef EXP_GRAD_IMPL_H
 #define EXP_GRAD_IMPL_H
 
+#include <type_traits>
+
 #include "utils/base_config.h"
 #include "utils/array.h"
 
@@ -20,6 +22,18 @@ public:
         return *static_cast<ImplType*>(this);
     }
 };
+
+template<typename Op, typename GIType, typename LhsType, typename RhsType>
+typename std::enable_if<Op::is_lhs::value, IndexArray>::type
+__grad_size(const GIType& grad, const LhsType& lhs, const RhsType& rhs) {
+    return lhs.size();
+}
+
+template<typename Op, typename GIType, typename LhsType, typename RhsType>
+typename std::enable_if<Op::is_rhs::value, IndexArray>::type
+__grad_size(const GIType& grad, const LhsType& lhs, const RhsType& rhs) {
+    return rhs.size();
+}
 
 // OIType = OperandImplType; GIType = GradImplType
 template<typename Op, typename GIType, typename OIType>
@@ -48,8 +62,11 @@ public:
                    const RhsImplType& rhs)
             : grad_(grad), lhs_(lhs), rhs_(rhs) {}
 
-    IndexArray grad_size(void) const { 
-        return Op::size(lhs_, rhs_);
+
+    IndexArray grad_size(void) const {
+        return __grad_size<Op, GIType, LhsImplType, RhsImplType>(
+            grad_, lhs_, rhs_
+        );
     }
 
     data_t eval(IndexArray& inds) const {

@@ -16,10 +16,10 @@
 // template specialization for GradImpl.
 namespace st {
 template<typename GIType>
-class BinaryGradImpl<typename op::Add::LhsGrad, GIType, TensorImpl, TensorImpl>
+class BinaryGradImpl<typename op::Add::Grad::Lhs, GIType, TensorImpl, TensorImpl>
         : public GradImpl<
             BinaryGradImpl<
-                typename op::Add::LhsGrad, GIType, TensorImpl, TensorImpl>> {
+                typename op::Add::Grad::Lhs, GIType, TensorImpl, TensorImpl>> {
 public:
     BinaryGradImpl(const GIType& grad, const TensorImpl& lhs, 
                    const TensorImpl& rhs)
@@ -35,7 +35,7 @@ public:
     }
 
     data_t eval(IndexArray& inds) const {
-        return op::Add::LhsGrad::map(inds, grad_, lhs_, rhs_);
+        return op::Add::Grad::Lhs::map(inds, grad_, lhs_, rhs_);
     }
 private:
     const GIType& grad_;
@@ -44,10 +44,10 @@ private:
 };
 
 template<typename GIType>
-class BinaryGradImpl<typename op::Add::RhsGrad, GIType, TensorImpl, TensorImpl>
+class BinaryGradImpl<typename op::Add::Grad::Rhs, GIType, TensorImpl, TensorImpl>
         : public GradImpl<
             BinaryGradImpl<
-                typename op::Add::RhsGrad, GIType, TensorImpl, TensorImpl>> {
+                typename op::Add::Grad::Rhs, GIType, TensorImpl, TensorImpl>> {
 public:
     BinaryGradImpl(const GIType& grad, const TensorImpl& lhs, 
                    const TensorImpl& rhs)
@@ -63,7 +63,7 @@ public:
     }
 
     data_t eval(IndexArray& inds) const {
-        return op::Add::RhsGrad::map(inds, grad_, lhs_, rhs_);
+        return op::Add::Grad::Rhs::map(inds, grad_, lhs_, rhs_);
     }
 private:
     const GIType& grad_;
@@ -72,10 +72,10 @@ private:
 };
 
 template<typename GIType>
-class BinaryGradImpl<typename op::Mul::LhsGrad, GIType, TensorImpl, TensorImpl>
+class BinaryGradImpl<typename op::Mul::Grad::Lhs, GIType, TensorImpl, TensorImpl>
         : public GradImpl<
             BinaryGradImpl<
-                typename op::Mul::LhsGrad, GIType, TensorImpl, TensorImpl>> {
+                typename op::Mul::Grad::Lhs, GIType, TensorImpl, TensorImpl>> {
 public:
     BinaryGradImpl(const GIType& grad, const TensorImpl& lhs, 
                    const TensorImpl& rhs)
@@ -91,7 +91,7 @@ public:
     }
 
     data_t eval(IndexArray& inds) const {
-        return op::Mul::LhsGrad::map(inds, grad_, lhs_, rhs_);
+        return op::Mul::Grad::Lhs::map(inds, grad_, lhs_, rhs_);
     }
 private:
     const GIType& grad_;
@@ -100,10 +100,10 @@ private:
 };
 
 template<typename GIType>
-class BinaryGradImpl<typename op::Mul::RhsGrad, GIType, TensorImpl, TensorImpl>
+class BinaryGradImpl<typename op::Mul::Grad::Rhs, GIType, TensorImpl, TensorImpl>
         : public GradImpl<
             BinaryGradImpl<
-                typename op::Mul::RhsGrad, GIType, TensorImpl, TensorImpl>> {
+                typename op::Mul::Grad::Rhs, GIType, TensorImpl, TensorImpl>> {
 public:
     BinaryGradImpl(const GIType& grad, const TensorImpl& lhs, 
                    const TensorImpl& rhs)
@@ -119,7 +119,7 @@ public:
     }
 
     data_t eval(IndexArray& inds) const {
-        return op::Mul::RhsGrad::map(inds, grad_, lhs_, rhs_);
+        return op::Mul::Grad::Rhs::map(inds, grad_, lhs_, rhs_);
     }
 private:
     const GIType& grad_;
@@ -128,10 +128,10 @@ private:
 };
 
 template<typename GIType>
-class BinaryGradImpl<typename op::Sub::LhsGrad, GIType, TensorImpl, TensorImpl>
+class BinaryGradImpl<typename op::Sub::Grad::Lhs, GIType, TensorImpl, TensorImpl>
         : public GradImpl<
             BinaryGradImpl<
-                typename op::Sub::LhsGrad, GIType, TensorImpl, TensorImpl>> {
+                typename op::Sub::Grad::Lhs, GIType, TensorImpl, TensorImpl>> {
 public:
     BinaryGradImpl(const GIType& grad, const TensorImpl& lhs, 
                    const TensorImpl& rhs)
@@ -147,7 +147,7 @@ public:
     }
 
     data_t eval(IndexArray& inds) const {
-        return op::Sub::LhsGrad::map(inds, grad_, lhs_, rhs_);
+        return op::Sub::Grad::Lhs::map(inds, grad_, lhs_, rhs_);
     }
 private:
     const GIType& grad_;
@@ -156,10 +156,10 @@ private:
 };
 
 template<typename GIType>
-class BinaryGradImpl<typename op::Sub::RhsGrad, GIType, TensorImpl, TensorImpl>
+class BinaryGradImpl<typename op::Sub::Grad::Rhs, GIType, TensorImpl, TensorImpl>
         : public GradImpl<
             BinaryGradImpl<
-                typename op::Sub::RhsGrad, GIType, TensorImpl, TensorImpl>> {
+                typename op::Sub::Grad::Rhs, GIType, TensorImpl, TensorImpl>> {
 public:
     BinaryGradImpl(const GIType& grad, const TensorImpl& lhs, 
                    const TensorImpl& rhs)
@@ -175,7 +175,7 @@ public:
     }
 
     data_t eval(IndexArray& inds) const {
-        return op::Sub::RhsGrad::map(inds, grad_, lhs_, rhs_);
+        return op::Sub::Grad::Rhs::map(inds, grad_, lhs_, rhs_);
     }
 private:
     const GIType& grad_;

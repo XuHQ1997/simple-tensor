@@ -1,6 +1,8 @@
 #ifndef EXP_OPERATOR_BASIC_OP_H
 #define EXP_OPERATOR_BASIC_OP_H
 
+#include <type_traits>
+
 #include "utils/base_config.h"
 
 namespace st {
@@ -37,6 +39,10 @@ struct Minus: public UnaryBasicOperator {
     }
 
     struct Grad {
+        using allow_broadcast = std::true_type;
+        using is_lhs = std::false_type;
+        using is_rhs = std::false_type;
+
         template<typename GradType, typename OperandType>
         static data_t map(IndexArray& inds, const GradType& grad, 
                           const OperandType& oeprand) {
@@ -51,30 +57,40 @@ struct Add : public BinaryBasicOperator {
         return lhs.eval(inds) + rhs.eval(inds);
     }
 
-    struct LhsGrad {
-        template<typename GradType, typename LhsType, typename RhsType>
-        static data_t map(IndexArray& inds, const GradType& grad,
-                          const LhsType& lhs, const RhsType& rhs) {
-            return grad.eval(inds);
-        }
+    struct Grad {
+        using allow_broadcast = std::true_type;
 
-        template<typename LhsType, typename RhsType>
-        static IndexArray size(const LhsType& lhs, const RhsType& rhs) {
-            return lhs.size();
-        }
-    };
+        struct Lhs {
+            using is_lhs = std::true_type;
+            using is_rhs = std::false_type;
 
-    struct RhsGrad {
-        template<typename GradType, typename LhsType, typename RhsType>
-        static data_t map(IndexArray& inds, const GradType& grad,
-                          const LhsType& lhs, const RhsType& rhs) {
-            return grad.eval(inds);
-        }
+            template<typename GradType, typename LhsType, typename RhsType>
+            static data_t map(IndexArray& inds, const GradType& grad,
+                            const LhsType& lhs, const RhsType& rhs) {
+                return grad.eval(inds);
+            }
 
-        template<typename LhsType, typename RhsType>
-        static IndexArray size(const LhsType& lhs, const RhsType& rhs) {
-            return rhs.size();
-        }
+            // template<typename LhsType, typename RhsType>
+            // static IndexArray size(const LhsType& lhs, const RhsType& rhs) {
+            //     return lhs.size();
+            // }
+        };
+
+        struct Rhs {
+            using is_lhs = std::false_type;
+            using is_rhs = std::true_type;
+
+            template<typename GradType, typename LhsType, typename RhsType>
+            static data_t map(IndexArray& inds, const GradType& grad,
+                            const LhsType& lhs, const RhsType& rhs) {
+                return grad.eval(inds);
+            }
+
+            // template<typename LhsType, typename RhsType>
+            // static IndexArray size(const LhsType& lhs, const RhsType& rhs) {
+            //     return rhs.size();
+            // }
+        };
     };
 };
 
@@ -84,30 +100,40 @@ struct Mul : public BinaryBasicOperator {
         return lhs.eval(inds) * rhs.eval(inds);
     }
 
-    struct LhsGrad {
-        template<typename GradType, typename LhsType, typename RhsType>
-        static data_t map(IndexArray& inds, const GradType& grad,
-                          const LhsType& lhs, const RhsType& rhs) {
-            return grad.eval(inds) * rhs.eval(inds);
-        }
+    struct Grad {
+        using allow_broadcast = std::true_type;
 
-        template<typename LhsType, typename RhsType>
-        static IndexArray size(const LhsType& lhs, const RhsType& rhs) {
-            return lhs.size();
-        }
-    };
+        struct Lhs {
+            using is_lhs = std::true_type;
+            using is_rhs = std::false_type;
 
-    struct RhsGrad {
-        template<typename GradType, typename LhsType, typename RhsType>
-        static data_t map(IndexArray& inds, const GradType& grad,
-                          const LhsType& lhs, const RhsType& rhs) {
-            return grad.eval(inds) * lhs.eval(inds);
-        }
+            template<typename GradType, typename LhsType, typename RhsType>
+            static data_t map(IndexArray& inds, const GradType& grad,
+                            const LhsType& lhs, const RhsType& rhs) {
+                return grad.eval(inds) * rhs.eval(inds);
+            }
 
-        template<typename LhsType, typename RhsType>
-        static IndexArray size(const LhsType& lhs, const RhsType& rhs) {
-            return rhs.size();
-        }
+            // template<typename LhsType, typename RhsType>
+            // static IndexArray size(const LhsType& lhs, const RhsType& rhs) {
+            //     return lhs.size();
+            // }
+        };
+
+        struct Rhs {
+            using is_lhs = std::false_type;
+            using is_rhs = std::true_type;
+
+            template<typename GradType, typename LhsType, typename RhsType>
+            static data_t map(IndexArray& inds, const GradType& grad,
+                            const LhsType& lhs, const RhsType& rhs) {
+                return grad.eval(inds) * lhs.eval(inds);
+            }
+
+            // template<typename LhsType, typename RhsType>
+            // static IndexArray size(const LhsType& lhs, const RhsType& rhs) {
+            //     return rhs.size();
+            // }
+        };
     };
 };
 
@@ -117,30 +143,40 @@ struct Sub : public BinaryBasicOperator{
         return lhs.eval(inds) - rhs.eval(inds);
     }
 
-    struct LhsGrad {
-        template<typename GradType, typename LhsType, typename RhsType>
-        static data_t map(IndexArray& inds, const GradType& grad,
-                          const LhsType& lhs, const RhsType& rhs) {
-            return grad.eval(inds);
-        }
-        
-        template<typename LhsType, typename RhsType>
-        static IndexArray size(const LhsType& lhs, const RhsType& rhs) {
-            return lhs.size();
-        }
-    };
+    struct Grad {
+        using allow_broadcast = std::true_type;
 
-    struct RhsGrad {
-        template<typename GradType, typename LhsType, typename RhsType>
-        static data_t map(IndexArray& inds, const GradType& grad,
-                          const LhsType& lhs, const RhsType& rhs) {
-            return -grad.eval(inds);
-        }
+        struct Lhs {
+            using is_lhs = std::true_type;
+            using is_rhs = std::false_type;
 
-        template<typename LhsType, typename RhsType>
-        static IndexArray size(const LhsType& lhs, const RhsType& rhs) {
-            return rhs.size();
-        }
+            template<typename GradType, typename LhsType, typename RhsType>
+            static data_t map(IndexArray& inds, const GradType& grad,
+                            const LhsType& lhs, const RhsType& rhs) {
+                return grad.eval(inds);
+            }
+
+            // template<typename LhsType, typename RhsType>
+            // static IndexArray size(const LhsType& lhs, const RhsType& rhs) {
+            //     return lhs.size();
+            // }
+        };
+
+        struct Rhs {
+            using is_lhs = std::false_type;
+            using is_rhs = std::true_type;
+
+            template<typename GradType, typename LhsType, typename RhsType>
+            static data_t map(IndexArray& inds, const GradType& grad,
+                            const LhsType& lhs, const RhsType& rhs) {
+                return -grad.eval(inds);
+            }
+
+            // template<typename LhsType, typename RhsType>
+            // static IndexArray size(const LhsType& lhs, const RhsType& rhs) {
+            //     return rhs.size();
+            // }
+        };
     };
 };
 
@@ -151,6 +187,10 @@ struct ReLU: public UnaryBasicOperator {
     }
 
     struct Grad {
+        using allow_broadcast = std::true_type;
+        using is_lhs = std::false_type;
+        using is_rhs = std::false_type;
+
         template<typename GradType, typename OperandType>
         static data_t map(IndexArray& inds, const GradType& grad, 
                           const OperandType& operand) {
@@ -166,6 +206,10 @@ struct Sigmoid: public UnaryBasicOperator {
     }
 
     struct Grad {
+        using allow_broadcast = std::true_type;
+        using is_lhs = std::false_type;
+        using is_rhs = std::false_type;
+
         template<typename GradType, typename OperandType>
         static data_t map(IndexArray& inds, const GradType& grad, 
                           const OperandType& operand) {
