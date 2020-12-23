@@ -3,12 +3,14 @@
 namespace st {
 namespace nn {
 Linear::Linear(index_t in_features, index_t out_features)
-        : weight_(Shape{in_features, out_features}, true),
+        : weight_(Shape{out_features, in_features}, true),
           bias_(Shape{ 1, out_features}, true)
     {}
 
 Tensor Linear::forward(const Tensor& x) {
-    Tensor y = op::matrix_mul(x, weight_) + bias_;
+    Tensor y = op::matrix_mul(
+        x, op::matrix_transpose(weight_)
+    ) + bias_;
     return y;
 }
 
@@ -24,7 +26,9 @@ LinearWithReLU::LinearWithReLU(index_t in_features, index_t out_features)
     {}
 
 Tensor LinearWithReLU::forward(const Tensor& x) {
-    Tensor y = op::relu(op::matrix_mul(x, weight_) + bias_);
+    Tensor y = op::relu(op::matrix_mul(
+        x, op::matrix_transpose(weight_)
+    ) + bias_);
     return y;
 }
 }  // namespace nn

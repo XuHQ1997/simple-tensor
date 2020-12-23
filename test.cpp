@@ -674,14 +674,17 @@ void test_img2col_operator_backward() {
 
 void test_conv2d_module(void) {
     using namespace st;
-    data_t weight_data[] = {0.144233, 0.038765, -0.064723, 0.091522, -0.221822, 0.243479,0.041969, -0.041030, 0.087458, 0.181160, -0.175163, 0.031789,0.128350, 0.186573, 0.171205, -0.095062, 0.164999, -0.001384, 0.056682, -0.051798, -0.021868, -0.078280, 0.213687, 0.207394, -0.004414, -0.229483, 0.107253, -0.277729, 0.163448, 0.117666, 0.083151, -0.082815, -0.063118, -0.060334, 0.225444, 0.198153};
+    data_t weight_data[] = 
+        {0.144233, 0.038765, -0.064723, 0.091522, -0.221822, 0.243479, 0.041969, -0.041030, 0.087458, 0.181160, -0.175163, 0.031789,
+         0.128350, 0.186573, 0.171205, -0.095062, 0.164999, -0.001384, 0.056682, -0.051798, -0.021868, -0.078280, 0.213687, 0.207394, 
+         -0.004414, -0.229483, 0.107253, -0.277729, 0.163448, 0.117666, 0.083151, -0.082815, -0.063118, -0.060334, 0.225444, 0.198153};
     nn::Conv2dWithReLU conv(
         /*in_channels=*/2,  /*out_channels=*/3,
         /*kernel_size=*/{2, 3}, /*stride=*/{2, 1},
         /*padding=*/{1, 0}
     );
     nn::ParamsDict params = conv.parameters();
-    Tensor& weight = params[0].second;
+    Tensor& weight = params["weight"];
     nn::CpyInitializer initilizer(weight, weight_data);
     initilizer.init();
 
@@ -721,6 +724,38 @@ void test_conv2d_module(void) {
             data_t value2 = weight_grad_expect[i][j];
             CHECK_FLOAT_EQUAL(value1, value2, "check2");
         }
+}
+
+void test_linear_module(void) {
+    using namespace st;
+    data_t weight_data[6][5] = 
+        {0.071760,  0.263576, -0.378940, -0.424306,  0.424915,
+        0.406897,  0.142503,  0.361772, -0.061179,  0.132496,
+        0.226302,  0.022161, -0.021480, -0.283614, -0.442592,
+        0.032238, -0.245419, -0.083803, -0.155786,  0.081459,
+        -0.104956,  0.009876,  0.175388,  0.024486, -0.188793,
+        0.262046, -0.425379, -0.263474,  0.102063, -0.067243};
+    data_t bias_data[] = {0.053275, 0.057604, -0.233080, 0.186017, -0.003390, 0.101612};
+    nn::LinearWithReLU linear(/*in_features=*/5, /*out_features=*/6);
+    nn::ParamsDict params = linear.parameters();
+    Tensor& weight = params["weight"];
+    Tensor& bias = params["bias"];
+    nn::CpyInitializer weight_initializer(weight, reinterpret_cast<data_t*>(weight_data));
+    nn::CpyInitializer bias_initializer(bias, reinterpret_cast<data_t*>(bias_data));
+    weight_initializer.init();
+    bias_initializer.init();
+
+    data_t input_data[3][5] = 
+        {{0.524644, 0.069943, 0.090128, 0.390283, 0.264224},
+         {0.360333, 0.167909, 0.272388, 0.330552, 0.947953},
+         {0.735467, 0.036351, 0.184947, 0.862948, 0.818394}};
+    Tensor input(reinterpret_cast<data_t*>(input_data), Shape{3, 5});
+
+    Tensor output = linear.forward(input);
+    cout << output << endl;
+    output.backward();
+    cout << weight.grad() << endl;
+    cout << bias.grad() << endl;
 }
 
 int main() {
@@ -766,6 +801,9 @@ int main() {
 
     cout << "\033[33mtest Conv2D module...\033[0m" << endl;
     test_conv2d_module();
+
+    cout << "\033[33mtest Linear module...\033[0m" << endl;
+    test_linear_module();
 
     cout << "\033[33mcheck all memory is deallocated...\033[0m" << endl;
     CHECK_TRUE(st::Alloc::all_clear(), "check memory all clear");

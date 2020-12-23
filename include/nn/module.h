@@ -4,14 +4,29 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include <functional>
+#include <initializer_list>
 
 #include "tensor/tensor.h"
 
 namespace st {
 namespace nn {
 
-// using ParamsDict = std::unordered_map<std::string, Tensor&>;
-using ParamsDict = std::vector<std::pair<std::string, Tensor&>>;
+
+class ParamsDict 
+        : public std::unordered_map<std::string, std::reference_wrapper<Tensor>> {
+public:
+    ParamsDict() = default;
+    ParamsDict(std::initializer_list<value_type> items)
+            : std::unordered_map<std::string, std::reference_wrapper<Tensor>>(items)
+        {}
+
+    Tensor& operator[](const std::string& key) {
+        auto iter = find(key);
+        return iter->second.get();
+    }
+};
+
 
 class Module {
 public:
