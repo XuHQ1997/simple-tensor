@@ -23,6 +23,71 @@
 using std::cout;
 using std::endl;
 
+void test_Alloc();
+void test_Tensor();
+void test_basic_operator();
+void test_matrix_operator();
+void test_numeric_operator();
+void test_conv_operator();
+void test_tensor_backward();
+void test_basic_operator_backward();
+void test_matrix_operator_backward();
+void test_numeric_operator_backward();
+void test_img2col_operator_backward();
+void test_broadcasting_operator_backward();
+void test_conv2d_module();
+void test_linear_module();
+void test_maxpool2d_module();
+
+int main() {
+    using namespace std::chrono;
+
+    steady_clock::time_point start_tp = steady_clock::now();
+
+    cout << "\033[33mtest allocator...\33[0m" << endl;
+    test_Alloc();
+    cout << "\033[33mtest tensor...\33[0m" << endl;
+    test_Tensor();
+    cout << "\033[33mtest basic operator...\033[0m" << endl;
+    test_basic_operator();
+    cout << "\033[33mtest matrix operator...\033[0m" << endl;
+    test_matrix_operator();
+    cout << "\033[33mtest numeric operator...\033[0m" << endl;
+    test_numeric_operator();
+    cout << "\033[33mtest conv operator...\033[0m" << endl;
+    test_conv_operator();
+
+    cout << "\033[33mtest tensor backward...\033[0m" << endl;
+    test_tensor_backward();
+    cout << "\033[33mtest basic operator backward...\033[0m" << endl;
+    test_basic_operator_backward();
+    cout << "\033[33mtest matrix operator backward...\033[0m" << endl;
+    test_matrix_operator_backward();
+    cout << "\033[33mtest numeric operator backward...\033[0m" << endl;
+    test_numeric_operator_backward();
+    cout << "\033[33mtest img2col operator backward...\033[0m" << endl;
+    test_img2col_operator_backward();
+    cout << "\033[33mtest broadcasting operator backward...\033[0m" << endl;
+    test_broadcasting_operator_backward();
+
+    cout << "\033[33mtest Conv2d module...\033[0m" << endl;
+    test_conv2d_module();
+    cout << "\033[33mtest Linear module...\033[0m" << endl;
+    test_linear_module();
+    cout << "\033[33mtest MaxPool2d module...\033[0m" << endl;
+    test_maxpool2d_module();
+
+    cout << "\033[33mcheck all memory is deallocated...\033[0m" << endl;
+    CHECK_TRUE(st::Alloc::all_clear(), "check memory all clear");
+
+    steady_clock::time_point end_tp = steady_clock::now();
+    duration<double> time_span = duration_cast<duration<double>>(end_tp - start_tp);
+    cout << "\033[32mTest success. Test took " << time_span.count();
+    cout << " seconds.\033[0m" << endl;
+    return 0;
+}
+
+
 struct Foo {
     static int ctr_call_counter;
     static int dectr_call_counter;
@@ -237,7 +302,7 @@ void test_basic_operator() {
         for(index_t j = 0; j < 3; ++j) {
             data_t value1 = t10[{i, j}];
             data_t value2 = t1[{j, i}] + 1;
-            CHECK_EQUAL(value1, value2, "check5");
+            CHECK_FLOAT_EQUAL(value1, value2, "check5");
         }
 
     // assignment of uncontiguous tensor
@@ -614,7 +679,7 @@ void test_img2col_operator_backward() {
         for(index_t j = 0; j < 4; ++j) {
             data_t value1 = t0_grad[{0, 0, i, j}];
             data_t value2 = t0_grad_expect[i][j];
-            CHECK_EQUAL(value1, value2, "check1");
+            CHECK_FLOAT_EQUAL(value1, value2, "check1");
         }
     }
 }
@@ -638,11 +703,11 @@ void test_img2col_operator_backward() {
         for(index_t j = 0; j < 4; ++j) {
             data_t value1 = t0_grad[{0, i, j}];
             data_t value2 = t0_grad_expect[i][j];
-            CHECK_EQUAL(value1, value2, "check1");
+            CHECK_FLOAT_EQUAL(value1, value2, "check1");
 
             value1 = t1_grad[{i, 0, j}];
             value2 = t1_grad_expect[j];
-            CHECK_EQUAL(value1, value2, "check2");
+            CHECK_FLOAT_EQUAL(value1, value2, "check2");
         }
     }
 
@@ -786,59 +851,49 @@ void test_linear_module(void) {
     }
 }
 
-int main() {
-    using namespace std::chrono;
+void test_maxpool2d_module(void) {
+    using namespace st;
+    data_t data1[2][6] = {{0.138318, 0.883046, 0.093294, 0.514822, 0.359068, 0.650812},
+                          {0.576113, 0.390465, 0.855900, 0.452224, 0.551624, 0.140468}};
+    data_t data2[2][7] = {{0.574436, 0.286016, 0.286861, 0.392806, 0.088330, 0.456134, 0.482773},
+                          {0.387206, 0.814651, 0.888812, 0.004778, 0.971438, 0.481807, 0.931557}};
+    Tensor t0(reinterpret_cast<data_t*>(data1), Shape{1, 2, 1, 6}, true);
+    Tensor t1(reinterpret_cast<data_t*>(data2), Shape{2, 1, 7, 1}, true);
+    Tensor img = t0 + t1;
 
-    steady_clock::time_point start_tp = steady_clock::now();
+    nn::MaxPool2d maxpool(
+        /*kernel_size=*/{3, 2}, /*stride=*/{1, 2}, /*padding=*/{1, 0}
+    );
+    Tensor maxpool_output = maxpool.forward(img);
+    Tensor reduced = op::mean(op::mean(maxpool_output, 0), 2);
+    Tensor output = op::matrix_mul(reduced, t1.view({7, 2}));
+    output.backward();
 
-    cout << "\033[33mtest allocator...\33[0m" << endl;
-    test_Alloc();
+    data_t output_expect[2][2] = {{3.787218, 5.987955}, {3.727950, 5.894424}};
+    for(index_t i = 0; i < 2; ++i)
+        for(index_t j = 0; j < 2; ++j) {
+            data_t value1 = output[{i, j}];
+            data_t value2 = output_expect[i][j];
+            CHECK_FLOAT_EQUAL(value1, value2, "check1");
+        }
 
-    cout << "\033[33mtest tensor...\33[0m" << endl;
-    test_Tensor();
+    data_t t0_grad_expect[2][6] = {{0.000000, 2.349201, 0.000000, 2.349201, 0.000000, 2.349201},
+                                   {2.349201, 0.000000, 2.349201, 0.000000, 2.349201, 0.000000}};
+    auto&& t0_grad = t0.grad();
+    for(index_t i = 0; i < 2; ++i)
+        for(index_t j = 6; j < 6; ++j) {
+            data_t value1 = t0_grad[{0, i, 0, j}];
+            data_t value2 = t0_grad_expect[i][j];
+            CHECK_FLOAT_EQUAL(value1, value2, "check2");
+        }
 
-    cout << "\033[33mtest basic operator...\033[0m" << endl;
-    test_basic_operator();
-
-    cout << "\033[33mtest matrix operator...\033[0m" << endl;
-    test_matrix_operator();
-
-    cout << "\033[33mtest numeric operator...\033[0m" << endl;
-    test_numeric_operator();
-
-    cout << "\033[33mtest conv operator...\033[0m" << endl;
-    test_conv_operator();
-
-    cout << "\033[33mtest tensor backward...\033[0m" << endl;
-    test_tensor_backward();
-
-    cout << "\033[33mtest basic operator backward...\033[0m" << endl;
-    test_basic_operator_backward();
-
-    cout << "\033[33mtest matrix operator backward...\033[0m" << endl;
-    test_matrix_operator_backward();
-
-    cout << "\033[33mtest numeric operator backward...\033[0m" << endl;
-    test_numeric_operator_backward();
-
-    cout << "\033[33mtest img2col operator backward...\033[0m" << endl;
-    test_img2col_operator_backward();
-
-    cout << "\033[33mtest broadcasting operator backward...\033[0m" << endl;
-    test_broadcasting_operator_backward();
-
-    cout << "\033[33mtest Conv2D module...\033[0m" << endl;
-    test_conv2d_module();
-
-    cout << "\033[33mtest Linear module...\033[0m" << endl;
-    test_linear_module();
-
-    cout << "\033[33mcheck all memory is deallocated...\033[0m" << endl;
-    CHECK_TRUE(st::Alloc::all_clear(), "check memory all clear");
-
-    steady_clock::time_point end_tp = steady_clock::now();
-    duration<double> time_span = duration_cast<duration<double>>(end_tp - start_tp);
-    cout << "\033[32mTest success. Test took " << time_span.count();
-    cout << " seconds.\033[0m" << endl;
-    return 0;
+    data_t t1_grad_expect[2][7] = {{4.273312, 2.733193, 2.807353, 4.221796, 2.625723, 4.329186, 5.097929},
+                                   {2.708350, 3.632129, 3.995808, 2.798316, 6.347974, 2.758435, 4.171799}};
+    auto&& t1_grad = t1.grad();
+    for(index_t i = 0; i < 2; ++i)
+        for(index_t j = 0; j < 7; ++j) {
+            data_t value1 = t1_grad[{i, 0, j, 0}];
+            data_t value2 = t1_grad_expect[i][j];
+            CHECK_FLOAT_EQUAL(value1, value2, "check3");
+        }
 }

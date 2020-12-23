@@ -27,7 +27,6 @@ public:
     }
 };
 
-
 class Module {
 public:
     virtual Tensor forward(const Tensor& input) = 0;
