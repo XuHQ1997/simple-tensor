@@ -19,16 +19,17 @@ public:
             "Only contiguous Tensor can be initialized.");
     }
 
+    virtual void init(void) const = 0;
+
+protected:
     index_t data_size(void) const {
         return param_.shape_.dsize();
     }
 
-    void set_value(index_t idx, data_t value) const {
-        param_.storage_[idx] = value;
+    data_t* get_storage(void) const {
+        return param_.storage_.dptr_;
     }
 
-    virtual void init(void) const = 0;
-protected:
     static std::default_random_engine engine_;
     TensorImpl& param_;
 };

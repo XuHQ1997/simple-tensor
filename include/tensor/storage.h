@@ -8,6 +8,11 @@
 
 namespace st {
 
+namespace nn {
+    class InitializerBase;
+    class OptimizerBase;
+}
+
 class Storage {
 public:
     explicit Storage(index_t size);
@@ -26,6 +31,10 @@ public:
     index_t offset(void) const { return dptr_ - bptr_->data_; }
     index_t version(void) const { return bptr_->version_; }
     void increment_version(void) const { ++bptr_->version_; }
+
+    // friend function
+    friend class nn::InitializerBase;
+    friend class nn::OptimizerBase;
 private:
     struct Vdata {
         index_t version_;

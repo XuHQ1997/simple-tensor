@@ -51,6 +51,17 @@ $(BIN)/module.o: src\nn\module.cpp include/exp/function.h \
  include/tensor/grad_meta.h
 	$(CXX) $(CXX_FLAGS) -I $(INCLUDE) -c -o $(BIN)/module.o src\nn\module.cpp
 
+$(BIN)/optim.o: src\nn\optim.cpp include/tensor/storage.h \
+ include/utils/base_config.h include/utils/allocator.h \
+ include/tensor/tensor.h include/exp/exp.h include/exp/exp_impl.h \
+ include/utils/array.h include/exp/grad_impl.h include/utils/exception.h \
+ include/exp/operator/log_softmax.h include/exp/operator/constant.h \
+ include/exp/operator/reduce_op.h include/exp/operator/nll_loss.h \
+ include/exp/operator/conv.h include/exp/operator/basic_op.h \
+ include/tensor/tensor_impl.h include/tensor/shape.h \
+ include/tensor/grad_meta.h include/nn/optim.h include/nn/module.h
+	$(CXX) $(CXX_FLAGS) -I $(INCLUDE) -c -o $(BIN)/optim.o src\nn\optim.cpp
+
 $(BIN)/shape.o: src\tensor\shape.cpp include/tensor/shape.h \
  include/utils/base_config.h include/utils/allocator.h \
  include/utils/array.h

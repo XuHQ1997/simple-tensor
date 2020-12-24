@@ -16,8 +16,10 @@ CpyInitializer::CpyInitializer(Tensor& param, data_t* data)
     {}
 
 void CpyInitializer::init(void) const {
-    for(index_t i = 0; i < InitializerBase::data_size(); ++i)
-        set_value(i, data_[i]);
+    data_t* storage_dptr = get_storage();
+    index_t dsize = data_size();
+    for(index_t i = 0; i < dsize; ++i)
+        storage_dptr[i] = data_[i];
 }
 
 KaimingInitializer::KaimingInitializer(Tensor& param, Mode mode, 
@@ -37,8 +39,11 @@ void KaimingInitializer::init(void) const {
     data_t delta = gain * std::sqrt(fan);
     std::normal_distribution<data_t> u(0, delta);
 
-    for(index_t i = 0; i < InitializerBase::data_size(); ++i)
-        set_value(i, u(engine_));
+    data_t* storage_dptr = get_storage();
+    index_t dsize = data_size();
+
+    for(index_t i = 0; i < dsize; ++i)
+        storage_dptr[i] = u(engine_);
 }
 
 NormalInitializer::NormalInitializer(Tensor& param, data_t mean, data_t delta)
@@ -47,8 +52,11 @@ NormalInitializer::NormalInitializer(Tensor& param, data_t mean, data_t delta)
 
 void NormalInitializer::init(void) const {
     std::normal_distribution<data_t> u(mean_, delta_);
-    for(index_t i = 0; i < InitializerBase::data_size(); ++i)
-        set_value(i, u(engine_));
+
+    data_t* storage_dptr = get_storage();
+    index_t dsize = data_size();
+    for(index_t i = 0; i < dsize; ++i)
+        storage_dptr[i] = u(engine_);
 }
 
 }  // namespace nn
