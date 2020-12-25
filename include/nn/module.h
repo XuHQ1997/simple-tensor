@@ -119,7 +119,7 @@ public:
     ~CrossEntropy() = default;
 
     Tensor forward(const Tensor& input,
-                   std::shared_ptr<index_t> labels);
+                   const index_t* labels);
 };
 
 }  // namespace nn

@@ -5,6 +5,7 @@
 #include <random>
 #include <chrono>
 #include <algorithm>
+#include <tuple>
 
 #include "data/mnist.h"
 
@@ -31,26 +32,24 @@ MNIST::MNIST(const std::string& img_path, const std::string& label_path,
         this->shuffle();
 }
 
-void MNIST::get_sample(index_t idx, data_t* sample, index_t& sample_label) const {
-    Img* img = reinterpret_cast<Img*>(sample);
-    *img = imgs_[idx];
-    sample_label = labels_[idx];
+std::pair<const data_t*, index_t> 
+MNIST::get_sample(index_t idx) const {
+    return {
+        reinterpret_cast<const data_t*>(&imgs_[idx]),
+        labels_[idx]
+    };
 }
 
-index_t MNIST::get_batch(index_t idx, data_t* batch, index_t* batch_labels) const {
+std::tuple<index_t, const data_t*, const index_t*> 
+MNIST::get_batch(index_t idx) const {
     index_t n_samples = (idx == n_batchs_ - 1) 
                             ? imgs_.size() - idx * batch_size_
                             : batch_size_;
-    auto data = reinterpret_cast<const data_t*>(
-        imgs_.data() + idx * batch_size_
-    );
-    std::memcpy(batch, data, n_samples * sizeof(Img));
-    std::memcpy(
-        batch_labels, 
-        labels_.data() + idx * batch_size_,
-        n_samples * sizeof(index_t)
-    );
-    return n_samples;
+    return {
+        n_samples,
+        reinterpret_cast<const data_t*>(&imgs_[idx * batch_size_]),
+        &labels_[idx * batch_size_]
+    };
 }
 
 void MNIST::shuffle(void) {

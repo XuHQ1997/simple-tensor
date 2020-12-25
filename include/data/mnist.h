@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include <tuple>
 
 #include "utils/base_config.h"
 
@@ -14,8 +15,10 @@ class DatasetBase {
 public:
     virtual index_t n_samples(void) const = 0;
     virtual index_t n_batchs(void) const = 0;
-    virtual void get_sample(index_t idx, data_t* sample, index_t& sample_label) const = 0;
-    virtual index_t get_batch(index_t idx, data_t* batch, index_t* batch_labels) const = 0;
+    
+    virtual std::pair<const data_t*, index_t> get_sample(index_t idx) const = 0;
+    virtual std::tuple<index_t, const data_t*, const index_t*> 
+    get_batch(index_t idx) const = 0;
     virtual void shuffle(void) = 0;
 };
 
@@ -34,8 +37,9 @@ public:
     index_t n_samples(void) const override { return imgs_.size(); }
     index_t n_batchs(void) const override { return n_batchs_; }
 
-    void get_sample(index_t idx, data_t* sample, index_t& sample_label) const override;
-    index_t get_batch(index_t idx, data_t* batch, index_t* batch_labels) const override;
+    std::pair<const data_t*, index_t> get_sample(index_t idx) const override;
+    std::tuple<index_t, const data_t*, const index_t*> 
+    get_batch(index_t idx) const override;
     void shuffle(void) override;
 private:
     void read_mnist_images(const std::string& path);

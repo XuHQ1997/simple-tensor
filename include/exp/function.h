@@ -2,6 +2,8 @@
 #define EXP_FUNCTION_H
 
 #include <type_traits>
+#include <memory>
+#include <cstring>
 
 #include "utils/allocator.h"
 #include "utils/exception.h"
@@ -237,6 +239,35 @@ nll_loss(const Exp<OIType>& operand,
     for(index_t i = 0; i < n_batch; ++i)
         CHECK_IN_RANGE(labels[i], 0, n_cls,
             "%d classes got label of %d", n_cls, labels[i]);
+
+    return Exp<UnaryExpImpl<NLLLoss, OIType>>(
+        Alloc::unique_construct<UnaryExpImpl<NLLLoss, OIType>>(
+            operand.impl_ptr(), labels_ptr
+        )
+    );
+}
+
+template<typename OIType>
+Exp<UnaryExpImpl<NLLLoss, OIType>>
+nll_loss(const Exp<OIType>& operand, 
+         const index_t* labels, 
+         index_t n_label=-1) {
+    CHECK_EQUAL(operand.impl().ndim(), 2, 
+        "NLL Loss is only supported for 2D Tensor, but got %dD one.", 
+        operand.impl().ndim());
+
+    index_t n_batch = operand.impl().size(0);
+    index_t n_cls = operand.impl().size(1);
+    CHECK_TRUE(n_label == -1 || n_label == n_batch,
+        "Batch size mismatch, x: %d, labels: %d", n_batch, n_label);
+
+    for(index_t i = 0; i < n_batch; ++i)
+        CHECK_IN_RANGE(labels[i], 0, n_cls,
+            "%d classes got label of %d", n_cls, labels[i]);
+
+    std::shared_ptr<index_t> labels_ptr = 
+        Alloc::shared_allocate<index_t>(n_batch * sizeof(index_t));
+    std::memcpy(labels_ptr.get(), labels, n_batch * sizeof(index_t));
 
     return Exp<UnaryExpImpl<NLLLoss, OIType>>(
         Alloc::unique_construct<UnaryExpImpl<NLLLoss, OIType>>(

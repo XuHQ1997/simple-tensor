@@ -130,7 +130,7 @@ ParamsDict MaxPool2d::parameters(void) {
 }
 
 Tensor CrossEntropy::forward(const Tensor& input,
-                             std::shared_ptr<index_t> labels) {
+                             const index_t* labels) {
     auto logits = op::log_softmax(input);
     auto nll = op::nll_loss(logits, labels);
     Tensor loss = op::mean(nll, 0);

@@ -919,14 +919,12 @@ void test_ce_module() {
     data_t input_data[3][5] = {{0.521807, 0.487334, 0.844843, 0.366452, 0.744550},
                                {0.861821, 0.102663, 0.949307, 0.086492, 0.588144},
                                {0.788253, 0.402394, 0.554831, 0.984794, 0.170077}};
-    std::shared_ptr<index_t> labels_ptr = Alloc::shared_allocate<index_t>(3 * sizeof(index_t));
-    index_t* labels = labels_ptr.get();
-    labels[0] = 2, labels[1] = 1, labels[2] = 0;
+    index_t labels[] = {2, 1, 0};
     Tensor input(reinterpret_cast<data_t*>(input_data), Shape{3, 5});
 
     nn::CrossEntropy criterion;
     Tensor out = linear.forward(input);
-    Tensor loss = criterion.forward(out, labels_ptr);
+    Tensor loss = criterion.forward(out, labels);
     loss.backward();
 
     data_t loss_expect = 1.157702;
