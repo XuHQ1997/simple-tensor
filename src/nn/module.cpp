@@ -1,12 +1,22 @@
+#include <cmath>
+
 #include "exp/function.h"
 #include "nn/module.h"
+#include "nn/init.h"
 
 namespace st {
 namespace nn {
 Linear::Linear(index_t in_features, index_t out_features)
         : weight_(Shape{out_features, in_features}, true),
-          bias_(Shape{ 1, out_features}, true)
-    {}
+          bias_(Shape{ 1, out_features}, true) {
+    KaimingInitializer weight_init(weight_);
+    weight_init.init();
+
+    index_t fan_in = weight_.size(1);
+    data_t bound = 1. / std::sqrt(fan_in);
+    UniformInitializer bias_init(bias_);
+    bias_init.init();
+}
 
 Tensor Linear::forward(const Tensor& x) {
     Tensor y1 = op::matrix_mul(
@@ -47,8 +57,10 @@ Conv2d::Conv2d(index_t in_channels, index_t out_channels,
           weight_(Shape{
               out_channels_,
               in_channels_ * kernel_size_.first * kernel_size_.second},
-              /*requires_grad=*/true)
-    {}
+              /*requires_grad=*/true) {
+    KaimingInitializer weight_init(weight_);
+    weight_init.init();
+}
 
 Tensor Conv2d::forward(const Tensor& x) {
     auto col_exp = op::img2col(

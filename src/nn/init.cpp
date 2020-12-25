@@ -29,29 +29,26 @@ KaimingInitializer::KaimingInitializer(Tensor& param, Mode mode,
     {}
 
 void KaimingInitializer::init(void) const {
-    index_t fan;
-    if((mode_ == Mode::fan_in) ^ conv_weight_)
-        fan = param_.size(0);
-    else
-        fan = param_.size(1);
-
+    index_t fan = mode_ == Mode::fan_in ? param_.size(1)
+                                        : param_.size(0);
     data_t gain = std::sqrt(2.);
-    data_t delta = gain * std::sqrt(fan);
-    std::normal_distribution<data_t> u(0, delta);
+    data_t bound = gain * std::sqrt(3. / fan);
+    std::uniform_real_distribution<data_t> u(-bound, bound);
 
     data_t* storage_dptr = get_storage();
     index_t dsize = data_size();
 
-    for(index_t i = 0; i < dsize; ++i)
+    for(index_t i = 0; i < dsize; ++i) {
         storage_dptr[i] = u(engine_);
+    }
 }
 
-NormalInitializer::NormalInitializer(Tensor& param, data_t mean, data_t delta)
-        : InitializerBase(param), mean_(mean), delta_(delta)
+UniformInitializer::UniformInitializer(Tensor& param, data_t a, data_t b)
+        : InitializerBase(param), a_(a), b_(b)
     {}
 
-void NormalInitializer::init(void) const {
-    std::normal_distribution<data_t> u(mean_, delta_);
+void UniformInitializer::init(void) const {
+    std::uniform_real_distribution<data_t> u(a_, b_);
 
     data_t* storage_dptr = get_storage();
     index_t dsize = data_size();

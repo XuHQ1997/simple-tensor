@@ -44,17 +44,30 @@ void SGD::step(void) {
 SGDwithMomentum::SGDwithMomentum(const ParamsDict& params_dict, 
                                  data_t lr, data_t momentum)
         : OptimizerBase(params_dict),
-          lr_(lr), momentum_(momentum) {
+          lr_(lr), momentum_(momentum),
+          first_step_(true) {
     running_means_.reserve(params_.size());
-    for(TensorImpl& t : params_)
+    for(TensorImpl& t : params_) {
+        index_t n_bytes = sizeof(data_t) * data_size(t);
         running_means_.emplace_back(
-            Alloc::shared_allocate<data_t>(
-                sizeof(data_t) * data_size(t)
-            )
+            Alloc::unique_allocate<data_t>(n_bytes)
         );
+    }
 }
 
 void SGDwithMomentum::step(void) {
+    if(first_step_) {
+        first_step_ = false;
+        for(index_t i = 0; i < params_.size(); ++i) {
+            TensorImpl& t = params_[i];
+            data_t* grad_dptr = get_grad(t);
+            data_t* vx = running_means_[i].get();
+            index_t dsize = data_size(t);
+
+            std::memcpy(vx, grad_dptr, dsize);
+        }    
+    }
+
     for(index_t i = 0; i < params_.size(); ++i) {
         TensorImpl& t = params_[i];
         data_t* storage_dptr = get_storage(t);

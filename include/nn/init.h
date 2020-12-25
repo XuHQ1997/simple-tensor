@@ -54,13 +54,13 @@ private:
     bool conv_weight_;
 };
 
-class NormalInitializer : public InitializerBase {
+class UniformInitializer : public InitializerBase {
 public:    
-    NormalInitializer(Tensor& param, data_t mean=0., data_t delta=1.);
+    UniformInitializer(Tensor& param, data_t a=0., data_t b=1.);
     void init(void) const;
 private:
-    data_t mean_;
-    data_t delta_;
+    data_t a_;
+    data_t b_;
 };
 
 }  // namespace nn

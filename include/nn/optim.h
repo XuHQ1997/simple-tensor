@@ -43,7 +43,8 @@ public:
 private:
     data_t lr_;
     data_t momentum_;
-    std::vector<std::shared_ptr<data_t>> running_means_;
+    bool first_step_;
+    std::vector<Alloc::TrivialUniquePtr<data_t>> running_means_;
 };
 }  // namespace nn
 }  // namespace st
