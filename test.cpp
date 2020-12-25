@@ -38,6 +38,7 @@ void test_broadcasting_operator_backward();
 void test_conv2d_module();
 void test_linear_module();
 void test_maxpool2d_module();
+void test_ce_module();
 
 int main() {
     using namespace std::chrono;
@@ -76,6 +77,8 @@ int main() {
     test_linear_module();
     cout << "\033[33mtest MaxPool2d module...\033[0m" << endl;
     test_maxpool2d_module();
+    cout << "\033[33mtest CrossEntropy module...\033[0m" << endl;
+    test_ce_module();
 
     cout << "\033[33mcheck all memory is deallocated...\033[0m" << endl;
     CHECK_TRUE(st::Alloc::all_clear(), "check memory all clear");
@@ -896,4 +899,56 @@ void test_maxpool2d_module(void) {
             data_t value2 = t1_grad_expect[i][j];
             CHECK_FLOAT_EQUAL(value1, value2, "check3");
         }
+}
+
+void test_ce_module() {
+    using namespace st;
+    data_t weight_data[3][5] = {{ 0.332016,  0.383861, -0.039896, -0.286464,  0.069793},
+                                {-0.341369,  0.439378, -0.156823, -0.208273, -0.401472},
+                                { 0.201601,  0.154146, -0.086722, -0.359864,  0.297248}};
+    data_t bias_data[3] = {-0.240007,  0.322247, -0.051916};
+    nn::Linear linear(5, 3);
+    nn::ParamsDict params = linear.parameters();
+    Tensor& weight = params["weight"];
+    Tensor& bias = params["bias"];
+    nn::CpyInitializer weight_initializer(weight, reinterpret_cast<data_t*>(weight_data));
+    nn::CpyInitializer bias_initializer(bias, reinterpret_cast<data_t*>(bias_data));
+    weight_initializer.init();
+    bias_initializer.init();
+
+    data_t input_data[3][5] = {{0.521807, 0.487334, 0.844843, 0.366452, 0.744550},
+                               {0.861821, 0.102663, 0.949307, 0.086492, 0.588144},
+                               {0.788253, 0.402394, 0.554831, 0.984794, 0.170077}};
+    std::shared_ptr<index_t> labels_ptr = Alloc::shared_allocate<index_t>(3 * sizeof(index_t));
+    index_t* labels = labels_ptr.get();
+    labels[0] = 2, labels[1] = 1, labels[2] = 0;
+    Tensor input(reinterpret_cast<data_t*>(input_data), Shape{3, 5});
+
+    nn::CrossEntropy criterion;
+    Tensor out = linear.forward(input);
+    Tensor loss = criterion.forward(out, labels_ptr);
+    loss.backward();
+
+    data_t loss_expect = 1.157702;
+    CHECK_FLOAT_EQUAL(loss_expect, loss.item(), "check1");
+
+    data_t weight_grad_expect[3][5] = {{-0.011948, -0.021014,  0.086070, -0.164264,  0.116384},
+                                       {-0.080774,  0.065085, -0.098823,  0.123327, -0.059957},
+                                       { 0.092722, -0.044071,  0.012753,  0.040937, -0.056427}};
+    auto&& weight_grad = weight.grad();
+    for(index_t i = 0; i < 3; ++i) {
+        for(index_t j = 0; j < 5; ++j) {
+            data_t value1 = weight_grad_expect[i][j];
+            data_t value2 = weight_grad[{i, j}];
+            CHECK_FLOAT_EQUAL(value1, value2, "check2");
+        }
+    }
+
+    data_t bias_grad_expect[3] = {0.012001, -0.047002,  0.035001};
+    auto&& bias_grad = bias.grad();
+    for(index_t i = 0; i < 3; ++i) {
+        data_t value1 = bias_grad_expect[i];
+        data_t value2 = bias_grad[{0, i}];
+        CHECK_FLOAT_EQUAL(value1, value2, "check3");
+    }
 }

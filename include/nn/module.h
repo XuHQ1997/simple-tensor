@@ -113,6 +113,15 @@ protected:
     Wsize padding_;
 };
 
+class CrossEntropy {
+public:
+    CrossEntropy() = default;
+    ~CrossEntropy() = default;
+
+    Tensor forward(const Tensor& input,
+                   std::shared_ptr<index_t> labels);
+};
+
 }  // namespace nn
 }  // namespace st
 #endif

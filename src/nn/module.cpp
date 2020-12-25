@@ -129,5 +129,12 @@ ParamsDict MaxPool2d::parameters(void) {
     return {};
 }
 
+Tensor CrossEntropy::forward(const Tensor& input,
+                             std::shared_ptr<index_t> labels) {
+    auto logits = op::log_softmax(input);
+    auto nll = op::nll_loss(logits, labels);
+    Tensor loss = op::mean(nll, 0);
+    return loss;
+}
 }  // namespace nn
 }  // namespace st
