@@ -22,7 +22,7 @@ OptimizerBase::OptimizerBase(const ParamsDict& params_dict) {
 void OptimizerBase::zero_grad(void) {
     for(TensorImpl& t: params_) {
         data_t* grad_dptr = get_grad(t);
-        std::memset(grad_dptr, 0, t.shape_.dsize());
+        std::memset(grad_dptr, 0, t.shape_.dsize() * sizeof(data_t));
     }
 }
 
@@ -60,24 +60,27 @@ void SGDwithMomentum::step(void) {
         first_step_ = false;
         for(index_t i = 0; i < params_.size(); ++i) {
             TensorImpl& t = params_[i];
+            data_t* storage_dptr = get_storage(t);
             data_t* grad_dptr = get_grad(t);
             data_t* vx = running_means_[i].get();
             index_t dsize = data_size(t);
 
-            std::memcpy(vx, grad_dptr, dsize);
-        }    
-    }
+            std::memcpy(vx, grad_dptr, dsize * sizeof(data_t));
+            for(index_t j = 0; j < dsize; ++j)
+                storage_dptr[j] -= lr_ * vx[j];
+        }
+    } else {
+        for(index_t i = 0; i < params_.size(); ++i) {
+            TensorImpl& t = params_[i];
+            data_t* storage_dptr = get_storage(t);
+            data_t* grad_dptr = get_grad(t);
+            data_t* vx = running_means_[i].get();
+            index_t dsize = data_size(t);
 
-    for(index_t i = 0; i < params_.size(); ++i) {
-        TensorImpl& t = params_[i];
-        data_t* storage_dptr = get_storage(t);
-        data_t* grad_dptr = get_grad(t);
-        data_t* vx = running_means_[i].get();
-        index_t dsize = data_size(t);
-
-        for(index_t j = 0; j < dsize; ++j) {
-            vx[i] = momentum_ * vx[i] + grad_dptr[i];
-            storage_dptr[i] -= lr_ * vx[i];
+            for(index_t j = 0; j < dsize; ++j) {
+                vx[j] = momentum_ * vx[j] + grad_dptr[j];
+                storage_dptr[j] -= lr_ * vx[j];
+            }
         }
     }
 }

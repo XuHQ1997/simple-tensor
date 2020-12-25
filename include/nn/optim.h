@@ -18,10 +18,10 @@ protected:
     static index_t data_size(const TensorImpl& t) {
         return t.shape_.dsize();
     }
-    static data_t* get_grad(TensorImpl& t) {
+    static data_t* get_storage(TensorImpl& t) {
         return t.storage_.dptr_;
     };
-    static data_t* get_storage(TensorImpl& t) {
+    static data_t* get_grad(TensorImpl& t) {
         return t.gradmeta_ptr_->grad_.dptr_;
     }
 

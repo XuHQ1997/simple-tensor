@@ -18,6 +18,7 @@
 #include "tensor/tensor.h"
 #include "nn/init.h"
 #include "nn/module.h"
+#include "nn/optim.h"
 
 
 using std::cout;
@@ -39,6 +40,7 @@ void test_conv2d_module();
 void test_linear_module();
 void test_maxpool2d_module();
 void test_ce_module();
+void test_optimizer();
 
 int main() {
     using namespace std::chrono;
@@ -79,6 +81,8 @@ int main() {
     test_maxpool2d_module();
     cout << "\033[33mtest CrossEntropy module...\033[0m" << endl;
     test_ce_module();
+    cout << "\033[33mtest optimizer...\033[0m" << endl;
+    test_optimizer();
 
     cout << "\033[33mcheck all memory is deallocated...\033[0m" << endl;
     CHECK_TRUE(st::Alloc::all_clear(), "check memory all clear");
@@ -948,5 +952,61 @@ void test_ce_module() {
         data_t value1 = bias_grad_expect[i];
         data_t value2 = bias_grad[{0, i}];
         CHECK_FLOAT_EQUAL(value1, value2, "check3");
+    }
+}
+
+void test_optimizer() {
+    using namespace st;
+    data_t weight_data[4][3] = {{ 0.5437, -0.4394, -0.0307}, {-0.3073,  0.4709,  0.1285},
+                                {-0.0405,  0.5013, -0.3253}, { 0.4171, -0.2727, -0.3348}};
+    data_t bias_data[4] = {0.1618, -0.4150,  0.1099,  0.2695};
+    nn::Linear linear(3, 4);
+    nn::ParamsDict params = linear.parameters();
+    Tensor& weight = params["weight"];
+    Tensor& bias = params["bias"];
+    nn::CpyInitializer weight_initializer(weight, reinterpret_cast<data_t*>(weight_data));
+    nn::CpyInitializer bias_initializer(bias, reinterpret_cast<data_t*>(bias_data));
+    weight_initializer.init();
+    bias_initializer.init();
+
+    nn::SGDwithMomentum optimizer(linear.parameters(), 0.01, 0.9);
+
+    data_t input_data[2][3] = {{0.4746, 0.5383, 0.2668}, {0.0405, 0.8955, 0.7365}};
+    Tensor input(reinterpret_cast<data_t*>(input_data), Shape{2, 3});
+
+    Tensor out1 = linear.forward(input);
+    out1.backward();
+    optimizer.step();
+    optimizer.zero_grad();
+    data_t weight_expect1[4][3] = {{ 0.5385, -0.4537, -0.0407}, {-0.3125,  0.4566,  0.1185}, 
+                                   {-0.0457,  0.4870, -0.3354}, { 0.4119, -0.2871, -0.3448}};
+    data_t bias_expect1[4] = {0.1418, -0.4350,  0.0899,  0.2495};
+    for(index_t i = 0; i < 4; ++i) {
+        for(index_t j = 0; j < 3; ++j) {
+            data_t value1 = weight_expect1[i][j];
+            data_t value2 = weight[{i, j}];
+            CHECK_FLOAT_EQUAL(value1, value2, "check1");
+        }
+        data_t value1 = bias_expect1[i];
+        data_t value2 = bias[{0, i}];
+        CHECK_FLOAT_EQUAL(value1, value2, "check1");
+    }
+
+    Tensor out2 = linear.forward(input);;
+    out2.backward();;
+    optimizer.step();
+    optimizer.zero_grad();
+    data_t weight_expect2[4][3] = {{ 0.5287, -0.4809, -0.0598}, {-0.3223,  0.4293,  0.0994},
+                                   {-0.0555,  0.4597, -0.3544}, { 0.4022, -0.3143, -0.3639}};
+    data_t bias_expect2[4] = {0.1038, -0.4730,  0.0519,  0.2115};
+    for(index_t i = 0; i < 4; ++i) {
+        for(index_t j = 0; j < 3; ++j) {
+            data_t value1 = weight_expect2[i][j];
+            data_t value2 = weight[{i, j}];
+            CHECK_FLOAT_EQUAL(value1, value2, "check1");
+        }
+        data_t value1 = bias_expect2[i];
+        data_t value2 = bias[{0, i}];
+        CHECK_FLOAT_EQUAL(value1, value2, "check1");
     }
 }
