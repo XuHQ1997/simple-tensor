@@ -75,6 +75,8 @@ struct Error: public std::exception {
 #define CHECK_NOT_NULL(ptr, format, ...) {}
 #define CHECK_EQUAL(x, y, format, ...) {}
 #define CHECK_IN_RANGE(x, lower, upper, format, ...) {}
+#define CHECK_FLOAT_EQUAL(x, y, format, ...) {}
+#define CHECK_INDEX_VALID(x, format, ...) {}
 #define CHECK_EXP_SAME_SHAPE(e1, e2) {}
 #define CHECK_EXP_BROADCAST(e1, e2) {}
 
