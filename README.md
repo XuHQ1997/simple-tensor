@@ -25,7 +25,11 @@ The training process wasn't fine-tuned. So I think there is still some room for 
 
 ##### 2. ConvNet trained on MNIST
 
-TODO
+|  Initializer   |    Optimizer    | Epoch |  Time   |  ACC   |
+| :------------: | :-------------: | :---: | :-----: | :----: |
+| KaimingUniform | SGDwithMomentum |   2   | 1904.62s | 0.9373 |
+
+The architecture of this CNN needs to be adjusted.
 
 ### Build and Run
 

@@ -1,10 +1,6 @@
 #include <iostream>
 #include <chrono>
 
-// The next line will cancel CHECK_XXX macro used in header files,
-// but have no effect on these in src files.
-#define CANCEL_CHECK
-
 #include "utils/base_config.h"
 #include "utils/allocator.h"
 #include "exp/function.h"
@@ -16,41 +12,68 @@
 using st::index_t;
 using st::data_t;
 
-class MLP : public st::nn::Module {
+
+class SimpleCNN : public st::nn::Module {
 public:
-    MLP(index_t in, index_t hidden1, index_t hidden2, index_t out)
-            : linear1_(in, hidden1),
-              linear2_(hidden1, hidden2),
-              linear3_(hidden2, out)
-        {}
-    ~MLP() = default;
+    SimpleCNN() = default;
+    ~SimpleCNN() = default;
 
     st::Tensor forward(const st::Tensor& input) {
-        st::Tensor x1 = linear1_.forward(input);
-        st::Tensor x2 = linear2_.forward(x1);
-        st::Tensor y = linear3_.forward(x2);
-        return y;
+        st::Tensor s0_x1 = s0_conv.forward(input);
+
+        st::Tensor s1_x1 = s1_conv1.forward(s0_x1);
+        st::Tensor s1_x2 = s1_conv2.forward(s1_x1);
+        st::Tensor s1_x3 = s1_pool.forward(s1_x2);
+
+        st::Tensor s2_x1 = s2_conv1.forward(s1_x3);
+        st::Tensor s2_x2 = s2_conv2.forward(s2_x1);
+        st::Tensor s2_x3 = s2_pool.forward(s2_x2);
+
+        st::Tensor feat(s2_x3.size());
+        feat = s2_x3;
+
+        st::Tensor y1 = linear1.forward(feat.view(
+            {s2_x3.size(0), 12*6*6}
+        ));
+        st::Tensor y2 = linear2.forward(y1);
+        st::Tensor y3 = linear3.forward(y2);
+        return y3;
     }
 
     st::nn::ParamsDict parameters(void) {
         return {
-            {"linear1", linear1_.parameters()},
-            {"linear2", linear2_.parameters()},
-            {"linear3", linear3_.parameters()}
+            {"s0_conv", s0_conv.parameters()},
+            {"s1_conv1", s1_conv1.parameters()},
+            {"s1_conv2", s1_conv2.parameters()},
+            {"s2_conv1", s2_conv1.parameters()},
+            {"s2_conv2", s2_conv2.parameters()},
+            {"linear1", linear1.parameters()},
+            {"linear2", linear1.parameters()},
+            {"linear3", linear1.parameters()}
         };
     }
-private:
-    st::nn::LinearWithReLU linear1_;
-    st::nn::LinearWithReLU linear2_;
-    st::nn::Linear linear3_;
-};
 
+private:
+    st::nn::Conv2d s0_conv{1, 3, {5, 5}, {1, 1}, {0, 0}};
+
+    st::nn::Conv2dWithReLU s1_conv1{3, 3, {3, 3}, {1, 1}, {1, 1}};
+    st::nn::Conv2dWithReLU s1_conv2{3, 6, {3, 3}, {1, 1}, {1, 1}};
+    st::nn::MaxPool2d s1_pool{{2, 2}, {2, 2}, {0, 0}};
+
+    st::nn::Conv2dWithReLU s2_conv1{6, 6, {3, 3}, {1, 1}, {1, 1}};
+    st::nn::Conv2dWithReLU s2_conv2{6, 12, {3, 3}, {1, 1}, {1, 1}};
+    st::nn::MaxPool2d s2_pool{{2, 2}, {2, 2}, {0, 0}};
+
+    st::nn::LinearWithReLU linear1{12*6*6, 6*6*6};
+    st::nn::LinearWithReLU linear2{6*6*6, 6*6*6};
+    st::nn::Linear linear3{6*6*6, 10};
+};
 
 int main() {
     // config
     constexpr index_t epoch = 2;
     constexpr index_t batch_size = 64;
-    constexpr data_t lr = 0.05;
+    constexpr data_t lr = 0.01;
     constexpr data_t momentum = 0.9;
     constexpr index_t print_iters = 10;
 
@@ -72,12 +95,12 @@ int main() {
     );
 
     // model and criterion
-    MLP mlp(st::data::MNIST::Img::n_pixels_, 512, 512, 10);
+    SimpleCNN scnn;
     st::nn::CrossEntropy criterion;
 
     // optimizer
     st::nn::SGDwithMomentum optimizer(
-        mlp.parameters(), /*lr=*/lr, /*momentum=*/momentum
+        scnn.parameters(), /*lr=*/lr, /*momentum=*/momentum
     );
 
     index_t n_samples;
@@ -92,10 +115,12 @@ int main() {
                 train_dataset.get_batch(j);
             st::Tensor input(
                 batch_samples, 
-                {n_samples, st::data::MNIST::Img::n_pixels_}
+                {n_samples, 1, 
+                 st::data::MNIST::Img::n_rows_, 
+                 st::data::MNIST::Img::n_cols_}
             );
 
-            st::Tensor output = mlp.forward(input);
+            st::Tensor output = scnn.forward(input);
             st::Tensor loss = criterion.forward(output, batch_labels);
             loss.backward();
 
@@ -114,11 +139,13 @@ int main() {
             std::tie(n_samples, batch_samples, batch_labels) =
                 val_dataset.get_batch(j);
             st::Tensor input(
-                batch_samples,
-                {n_samples, st::data::MNIST::Img::n_pixels_}
+                batch_samples, 
+                {n_samples, 1, 
+                 st::data::MNIST::Img::n_rows_, 
+                 st::data::MNIST::Img::n_cols_}
             );
 
-            st::Tensor output = mlp.forward(input);
+            st::Tensor output = scnn.forward(input);
             st::Tensor predict = st::op::argmax(output, 1);
             for(index_t k = 0; k < n_samples; ++k) {
                 ++total_samples;

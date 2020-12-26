@@ -11,13 +11,16 @@ all_src_files     = $(foreach folder, $(folders), $(wildcard $(SRC)/$(folder)/*.
 all_src_basenames = $(basename $(notdir $(all_src_files)))
 all_objects       = $(addprefix $(BIN)/, $(addsuffix .o, $(all_src_basenames)))
 
-.PHONY : clean test train_mlp
+.PHONY : test train_mlp train_cnn clean
 
 test: $(BIN)/test.exe
 	@echo build test finished
 
 train_mlp: $(BIN)/train_mlp.exe
 	@echo build train_mlp finished
+
+train_cnn: $(BIN)/train_cnn.exe
+	@echo build train_cnn finished
 
 $(BIN)/test.exe: $(BIN)/test.o $(all_objects)
 	$(CXX) $(CXX_FLAGS) -I $(INCLUDE) -o $@ $^
@@ -29,6 +32,12 @@ $(BIN)/train_mlp.exe: $(BIN)/train_mlp.o $(all_objects)
 	$(CXX) $(CXX_FLAGS) -I $(INCLUDE) -o $@ $^
 
 $(BIN)/train_mlp.o: train_mlp.cpp $(all_header_files)
+	$(CXX) $(CXX_FLAGS) -I $(INCLUDE) -c -o $@ $< 
+
+$(BIN)/train_cnn.exe: $(BIN)/train_cnn.o $(all_objects)
+	$(CXX) $(CXX_FLAGS) -I $(INCLUDE) -o $@ $^
+
+$(BIN)/train_cnn.o: train_cnn.cpp $(all_header_files)
 	$(CXX) $(CXX_FLAGS) -I $(INCLUDE) -c -o $@ $< 
 
 clean:
