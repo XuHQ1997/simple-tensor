@@ -7,7 +7,7 @@
 #include <algorithm>
 #include <tuple>
 
-#include "data/mnist.h"
+#include "data/data.h"
 
 namespace st {
 namespace data {

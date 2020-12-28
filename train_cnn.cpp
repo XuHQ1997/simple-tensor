@@ -6,7 +6,7 @@
 #include "exp/function.h"
 #include "tensor/tensor.h"
 #include "nn/module.h"
-#include "data/mnist.h"
+#include "data/data.h"
 #include "nn/optim.h"
 
 using st::index_t;
