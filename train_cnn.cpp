@@ -19,7 +19,7 @@ public:
     ~SimpleCNN() = default;
 
     st::Tensor forward(const st::Tensor& input) {
-        st::Tensor s0_x1 = s0_conv.forward(input);
+        st::Tensor s0_x1 = conv0.forward(input);
 
         st::Tensor s1_x1 = s1_conv1.forward(s0_x1);
         st::Tensor s1_x2 = s1_conv2.forward(s1_x1);
@@ -32,46 +32,42 @@ public:
         st::Tensor feat(s2_x3.size());
         feat = s2_x3;
 
-        st::Tensor y1 = linear1.forward(feat.view(
-            {s2_x3.size(0), 12*6*6}
-        ));
+        st::Tensor y1 = linear1.forward(feat.view({
+            feat.size(0), 32*4*4
+        }));
         st::Tensor y2 = linear2.forward(y1);
-        st::Tensor y3 = linear3.forward(y2);
-        return y3;
+        return y2;
     }
 
     st::nn::ParamsDict parameters(void) {
         return {
-            {"s0_conv", s0_conv.parameters()},
+            {"conv0", conv0.parameters()},
             {"s1_conv1", s1_conv1.parameters()},
             {"s1_conv2", s1_conv2.parameters()},
             {"s2_conv1", s2_conv1.parameters()},
             {"s2_conv2", s2_conv2.parameters()},
             {"linear1", linear1.parameters()},
-            {"linear2", linear1.parameters()},
-            {"linear3", linear1.parameters()}
+            {"linear2", linear2.parameters()}
         };
     }
-
 private:
-    st::nn::Conv2d s0_conv{1, 3, {5, 5}, {1, 1}, {0, 0}};
+    st::nn::Conv2dWithReLU conv0{3, 16, {5, 5}, {2, 2}, {2, 2}};
 
-    st::nn::Conv2dWithReLU s1_conv1{3, 3, {3, 3}, {1, 1}, {1, 1}};
-    st::nn::Conv2dWithReLU s1_conv2{3, 6, {3, 3}, {1, 1}, {1, 1}};
+    st::nn::Conv2dWithReLU s1_conv1{16, 16, {3, 3}, {1, 1}, {1, 1}};
+    st::nn::Conv2dWithReLU s1_conv2{16, 16, {3, 3}, {1, 1}, {1, 1}};
     st::nn::MaxPool2d s1_pool{{2, 2}, {2, 2}, {0, 0}};
 
-    st::nn::Conv2dWithReLU s2_conv1{6, 6, {3, 3}, {1, 1}, {1, 1}};
-    st::nn::Conv2dWithReLU s2_conv2{6, 12, {3, 3}, {1, 1}, {1, 1}};
+    st::nn::Conv2dWithReLU s2_conv1{16, 32, {3, 3}, {1, 1}, {1, 1}};
+    st::nn::Conv2dWithReLU s2_conv2{32, 32, {3, 3}, {1, 1}, {1, 1}};
     st::nn::MaxPool2d s2_pool{{2, 2}, {2, 2}, {0, 0}};
 
-    st::nn::LinearWithReLU linear1{12*6*6, 6*6*6};
-    st::nn::LinearWithReLU linear2{6*6*6, 6*6*6};
-    st::nn::Linear linear3{6*6*6, 10};
+    st::nn::LinearWithReLU linear1{32*4*4, 256};
+    st::nn::Linear linear2{256, 10};
 };
 
 int main() {
     // config
-    constexpr index_t epoch = 2;
+    constexpr index_t epoch = 4;
     constexpr index_t batch_size = 64;
     constexpr data_t lr = 0.01;
     constexpr data_t momentum = 0.9;
@@ -81,18 +77,22 @@ int main() {
     steady_clock::time_point start_tp = steady_clock::now();
 
     // dataset
-    st::data::MNIST train_dataset(
-        /*img_path=*/"D:\\storehouse\\dataset\\MNIST\\train-images.idx3-ubyte",
-        /*label_path=*/"D:\\storehouse\\dataset\\MNIST\\train-labels.idx1-ubyte",
+    st::data::Cifar10 train_dataset(
+        /*dataset_dir=*/"D:\\storehouse\\dataset\\cifar-10-batches-bin",
+        /*train=*/true,
         /*batch_size=*/batch_size,
-        /*shuffle=*/false
+        /*shuffle=*/false,
+        /*path_sep=*/'\\'
     );
-    st::data::MNIST val_dataset(
-        /*img_path=*/"D:\\storehouse\\dataset\\MNIST\\t10k-images.idx3-ubyte",
-        /*label_path=*/"D:\\storehouse\\dataset\\MNIST\\t10k-labels.idx1-ubyte",
+    st::data::Cifar10 val_dataset(
+        /*dataset_dir=*/"D:\\storehouse\\dataset\\cifar-10-batches-bin",
+        /*train=*/false,
         /*batch_size=*/batch_size,
-        /*shuffle=*/false
+        /*shuffle=*/false,
+        /*path_sep=*/'\\'
     );
+    std::cout << "train dataset length: " << train_dataset.n_samples() << std::endl;
+    std::cout << "val dataset length: " << val_dataset.n_samples() << std::endl;
 
     // model and criterion
     SimpleCNN scnn;
@@ -115,9 +115,10 @@ int main() {
                 train_dataset.get_batch(j);
             st::Tensor input(
                 batch_samples, 
-                {n_samples, 1, 
-                 st::data::MNIST::Img::n_rows_, 
-                 st::data::MNIST::Img::n_cols_}
+                {n_samples, 
+                 st::data::Cifar10::Img::n_channels_, 
+                 st::data::Cifar10::Img::n_rows_, 
+                 st::data::Cifar10::Img::n_cols_}
             );
 
             st::Tensor output = scnn.forward(input);
@@ -140,9 +141,10 @@ int main() {
                 val_dataset.get_batch(j);
             st::Tensor input(
                 batch_samples, 
-                {n_samples, 1, 
-                 st::data::MNIST::Img::n_rows_, 
-                 st::data::MNIST::Img::n_cols_}
+                {n_samples,
+                 st::data::Cifar10::Img::n_channels_, 
+                 st::data::Cifar10::Img::n_rows_, 
+                 st::data::Cifar10::Img::n_cols_}
             );
 
             st::Tensor output = scnn.forward(input);

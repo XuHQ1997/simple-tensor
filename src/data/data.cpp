@@ -7,6 +7,8 @@
 #include <algorithm>
 #include <tuple>
 
+#include "utils/base_config.h"
+#include "utils/exception.h"
 #include "data/data.h"
 
 namespace st {
@@ -64,6 +66,8 @@ void MNIST::shuffle(void) {
 
 void MNIST::read_mnist_images(const std::string& path) {
     std::ifstream file(path, std::ios::binary);
+    if(!file.is_open())
+        THROW_ERROR("Can't open file: %s", path.c_str());
 
     unsigned int headers[4];
     file.read(reinterpret_cast<char*>(headers), 16);
@@ -87,6 +91,8 @@ void MNIST::read_mnist_images(const std::string& path) {
 
 void MNIST::read_mnist_labels(const std::string& path) {
     std::ifstream file(path, std::ios::binary);
+    if(!file.is_open())
+        THROW_ERROR("Can't open file: %s", path.c_str());
 
     unsigned int headers[2];
     file.read(reinterpret_cast<char*>(headers), 8);
@@ -105,4 +111,92 @@ void MNIST::read_mnist_labels(const std::string& path) {
     }
 }
 }  // namespace data
+}  // namespace st
+
+
+namespace st {
+namespace data {
+
+
+Cifar10::Cifar10(const std::string& dataset_dir, bool train,
+                 index_t batch_size, bool shuffle, 
+                 char path_sep)
+        : batch_size_(batch_size) {
+    read_cifar10(dataset_dir, train, path_sep);
+    n_batchs_ = (imgs_.size() + batch_size_ - 1) / batch_size_;
+}
+
+std::pair<const data_t*, index_t> 
+Cifar10::get_sample(index_t idx) const {
+    return {
+        reinterpret_cast<const data_t*>(&imgs_[idx]),
+        labels_[idx]
+    };
+}
+
+std::tuple<index_t, const data_t*, const index_t*> 
+Cifar10::get_batch(index_t idx) const {
+    index_t n_samples = (idx == n_batchs_ - 1) 
+                            ? imgs_.size() - idx * batch_size_
+                            : batch_size_;
+    return {
+        n_samples,
+        reinterpret_cast<const data_t*>(&imgs_[idx * batch_size_]),
+        &labels_[idx * batch_size_]
+    };
+}
+
+void Cifar10::shuffle(void) {
+    unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+    
+    std::default_random_engine engine1(seed);
+    std::shuffle(imgs_.begin(), imgs_.end(), engine1);
+
+    std::default_random_engine engine2(seed);
+    std::shuffle(labels_.begin(), labels_.end(), engine2);
+}
+
+void Cifar10::read_cifar10(const std::string& dataset_dir, bool train, 
+                           char path_sep) {
+    if(train) {
+        imgs_.reserve(Img::n_train_samples_);
+        labels_.reserve(Img::n_train_samples_);
+        std::vector<std::string> bin_names{
+            "data_batch_1.bin", "data_batch_2.bin", "data_batch_3.bin",
+            "data_batch_4.bin", "data_batch_5.bin"
+        };
+        for(auto& bin_name : bin_names)
+            read_bin(dataset_dir + path_sep + bin_name);
+    } else {
+        imgs_.reserve(Img::n_test_samples_);
+        labels_.reserve(Img::n_test_samples_);
+        const std::string bin_name = "test_batch.bin";
+        read_bin(dataset_dir + path_sep + bin_name);
+    }
+}
+
+void Cifar10::read_bin(const std::string& bin_path) {
+    std::ifstream file(bin_path, std::ios::binary);
+    if(!file.is_open()) 
+        THROW_ERROR("Can't open file: %s", bin_path.c_str());
+
+    index_t sample_size = 1 + Img::n_pixels_;
+    std::unique_ptr<char> char_data_ptr(new char[sample_size]);
+    auto char_data = char_data_ptr.get();
+    auto uchar_data = reinterpret_cast<unsigned char*>(char_data);
+
+    while(file.peek() != EOF) {
+        file.read(char_data, sample_size);
+
+        imgs_.push_back({});
+        labels_.push_back(uchar_data[0]);
+
+        auto src = uchar_data + 1;
+        auto dist = reinterpret_cast<data_t*>(&imgs_.back());
+
+        for(index_t i = 0; i < Img::n_pixels_; ++i)
+            dist[i] = src[i] / 255.0;
+    }
+}
+}  // namesapce data
 }  // namespace st
