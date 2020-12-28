@@ -32,7 +32,9 @@ class SGD : public OptimizerBase {
 public:
     SGD(const ParamsDict& params_dict, data_t lr);
     void step(void);
-private:    
+    data_t lr(void) { return lr_; }
+    void set_lr(data_t lr) { lr_ = lr; } 
+private:
     data_t lr_;
 };
 
@@ -40,6 +42,9 @@ class SGDwithMomentum : public OptimizerBase {
 public:
     SGDwithMomentum(const ParamsDict& params_dict, data_t lr, data_t momentum);
     void step(void);
+    data_t lr(void) { return lr_; }
+    void set_lr(data_t lr) { lr_ = lr; } 
+    void lr_decay(data_t factor) { lr_ *= factor; }
 private:
     data_t lr_;
     data_t momentum_;

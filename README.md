@@ -19,7 +19,7 @@ For many reasons, the repositories such as Pytorch and Tensorflow is too complic
 
 |  Initializer   |    Optimizer    | Epoch |  ACC   |
 | :------------: | :-------------: | :---: | :----: |
-| KaimingUniform | SGDwithMomentum |   2   | 0.9708 |
+| KaimingUniform | SGDwithMomentum |   3   | 0.9817 |
 
 The training process wasn't fine-tuned. So I think there is still some room for improvement.
 

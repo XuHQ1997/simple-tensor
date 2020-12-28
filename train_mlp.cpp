@@ -48,10 +48,12 @@ private:
 
 int main() {
     // config
-    constexpr index_t epoch = 2;
+    constexpr index_t epoch = 3;
     constexpr index_t batch_size = 64;
     constexpr data_t lr = 0.05;
     constexpr data_t momentum = 0.9;
+    constexpr data_t lr_decay_factor = 0.1;
+    constexpr index_t lr_decay_epoch = 2;
     constexpr index_t print_iters = 10;
 
     using namespace std::chrono;
@@ -87,6 +89,13 @@ int main() {
         std::cout << "Epoch " << i << " training..." << std::endl;
         std::cout << "total iters: " << train_dataset.n_batchs() << std::endl;
         train_dataset.shuffle();
+
+        if(i == lr_decay_epoch) {
+            data_t lr = optimizer.lr();
+            optimizer.set_lr(lr * lr_decay_factor);
+            std::cout << "Lr decay to " << optimizer.lr() << std::endl;
+        }
+
         for(index_t j = 0; j < train_dataset.n_batchs(); ++j) {
             std::tie(n_samples, batch_samples, batch_labels) = 
                 train_dataset.get_batch(j);
