@@ -4,6 +4,8 @@ Simple-Tensor is trying to implement **Basic operation of Tensor** ,**Autograd b
 
 For many reasons, the repositories such as Pytorch and Tensorflow is too complicated to learn about how Tensors and Computational graphs work. While in this repository, I try to make the concept complete and the code clear.  And of course you shouldn't expect this repo is as efficient as Pytorch or others.
 
+You can find some *Chinese DOCs* in `docs` to learn more details about the implement.
+
 ### Features
 
 - [x] Memory management
