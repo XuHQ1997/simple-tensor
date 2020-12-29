@@ -10,7 +10,7 @@
 struct Tensor {
 	double* data;
 	int* offset;
-    int ndim;
+	int ndim;
 	int* shape;
 	int* stride;
 };
@@ -43,13 +43,25 @@ t.stride = new int[3]{12, 4, 1};
 2. `t.stride[1] = 4`是因为`t.shape[2] = 4`；
 3. `t.stride[0] = 12`是因为`t.shape[1] * t.shape[2] = 12`。
 
-规范地写出来就是：
+规范地把规律写出来就是：
 $$
 t.stride[i] = \begin{cases}
 1, &\text{if } i=t.ndim-1, \\
 \prod_{k=i+1}^{ndim-1}t.shape[k], &\text{otherwise}.
 \end{cases}
 $$
+用代码表示：
+
+```c++
+void init_stride(Tensor& t) {
+    int stride = 1;
+    for(int i = ndim - 1; i >= 0; --i) {
+        t.stride[i] = stride;
+        stride *= t.shape[i];
+    }
+}
+```
+
 有了这个结构之后，下面结合具体的操作来进行说明如何使用。
 
 #### 2. Operation
@@ -63,7 +75,7 @@ $$
 ```c++
 int array3d[2][3][4];
 int* array1d = reinterpret_cast<int*>(array);
-ASSERT(array[i][j][k] == array1d[i*12 + j*4 + k])
+ASSERT(array3d[i][j][k] == array1d[i*12 + j*4 + k])
 ```
 
 `Tensor::stride`就是一样的东西，记录了如何把一维的`Tensor::data`解释成多维。
@@ -146,7 +158,7 @@ t2 = t1.view(3, 4)  # RuntimeError
 bool is_contiguous(const Tensor& t) {
     int stride = 1;
     for(int i = t.ndim - 1; i >= 0; --i) {
-        if(t.stride[i] == stride)
+        if(t.stride[i] != stride)
             return false;
         stride *= t.shape[i];
     }
@@ -161,7 +173,7 @@ t.stride[i] = \begin{cases}
 \prod_{k=i+1}^{ndim-1}t.shape[k], &\text{otherwise}.
 \end{cases}
 $$
-那么，`t`就是连续的，否则就是不连续的。在Pytorch里，可以通过`t.contiguous()`来得到一个连续的Tensor，但是其中涉及到数据的拷贝，就无法再常数时间复杂度内完成了。
+那么，`t`就是连续的，否则就是不连续的。在Pytorch里，可以通过`t.contiguous()`来得到一个连续的Tensor，但是其中涉及到数据的拷贝，就无法在常数时间复杂度内完成了。
 
 如果已知view前后的Tensor都是连续的（Pytorch里好像可以对局部连续的Tensor做view，这里就不探讨了），那么view操作就同样简单了，只需根据新的shape初始化stride就行。
 
@@ -241,7 +253,78 @@ Tensor slice(const Tensor& t, int start_idx, int end_idx, int dim) {
 }
 ```
 
+##### 2.6 Broadcasting
+
+广播机制也是Tensor运算的一大特色，可以使不具有相同形状的Tensor进行加减乘除运算。下面是[Pytorch官网的例子](https://pytorch.org/docs/stable/notes/broadcasting.html?highlight=broadcasting)：
+
+```python
+# python code
+# can line up trailing dimensions to make reading easier
+>>> x=torch.empty(5,1,4,1)
+>>> y=torch.empty(  3,1,1)
+>>> (x+y).size()
+torch.Size([5, 3, 4, 1])
+
+# but not necessary:
+>>> x=torch.empty(1)
+>>> y=torch.empty(3,1,7)
+>>> (x+y).size()
+torch.Size([3, 1, 7])
+
+>>> x=torch.empty(5,2,4,1)
+>>> y=torch.empty(3,1,1)
+>>> (x+y).size()  # Runtime Error
+```
+
+为了支持广播机制，我们需要修改一下stride初始化的方式：在原有初始化的基础上，将size为1的维度对应的strde设为0。
+$$
+t.stride[i]=\begin{cases}
+0, &\text{if } t.shape[i] = 1, \\
+1, &\text{elif } i =t.ndim-1, \\
+\prod^{t.ndim-1}_{k=i+1}t.shape[k] &\text{otherwise}.
+\end{cases}
+$$
+用代码表示依然很简单：
+
+```c++
+void init_stride(Tensor& t) {
+    int stride = 1;
+    for(int i = ndim - 1; i >= 0; --i) {
+        t.stride[i] = t.shape[i] == 1 ? 0 : stride;
+        stride *= t.shape[i];
+    }
+}
+```
+
+首先，这样设置对正常取值是没有影响的，因为这一维的尺寸是1，那么能够取的索引值只有0，无论stride设置成怎样的值，这一维对偏移的贡献都是0。
+
+其次，在broadcasting的场景中，考虑这样的一个运算：
+
+```python
+# python code
+>>> t0.size()
+(2, 3, 4)
+>>> t1.size()
+(2, 1, 4)
+>>> t2 = t0 + t1
+>>> t2.size()
+(2, 3, 4)
+```
+
+我们期待的是，
+
+```python
+t2[i, j, k] == t0[i, j, k] + t1[i, 0, k]
+```
+
+因为`t1.size(1)==1`，所以`j`对于`t1`只能取0。如果按照这种直观的思路实现的话，就需要对`t.shape`在某一维度上是否为1进行判断，非常麻烦。而如果从`t1.stride`入手，这个过程就会简单很多。因为初始化时已经将`t1.stride[1]`设为0，所以这一维度上的索引实际上是无效，那么就可以简化如下：
+
+```python
+t2[i, j, k] == t0[i, j, k] + t1[i, j, k]
+```
+
+也就是说，可以使用相同的索引对结果和两个操作数取值，而无需多余的判断。
+
 #### 3. My Implement
 
 在Simple-Tensor中，这部分对应的实现位于[include/tensor_impl.h](https://github.com/XuHQ1997/simple-tensor/blob/main/include/tensor/tensor_impl.h)和[src/tensor_impl.cpp](https://github.com/XuHQ1997/simple-tensor/blob/main/src/tensor/tensor_impl.cpp)中。因为用`Storage`封装了`Tensor::data`和`Tensor::offset`，用`Shape`封装了`Tensor::shape`，用`IndexArray`封装了`Tensor::stride`，并且进行了参数检查，所以代码稍有不同，但原理大致相同。还有其中关于自动求导的代码，放在其他文档中介绍。
-
