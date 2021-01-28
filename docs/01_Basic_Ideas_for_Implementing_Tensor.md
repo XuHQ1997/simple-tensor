@@ -1,6 +1,6 @@
 ### Basic Ideas for Implementing Tensor
 
-使用Pytorch等深度学习框架时，我们常常会用view、transpose等函数得到不同形状的Tensor，或者在某一维上进行索引、切片来截取部分数据。无论操作的Tensor含有多少数据，这些操作都可以很快地完成，时间复杂度几乎为常数。显然，要做到这一点，必须共享这些Tensor存储的数据。那么形状各异的Tensor是如何共享数据的呢？下面来介绍Tensor内部的基本概念。
+使用Pytorch等深度学习框架时，我们常常会用view、transpose等函数得到不同形状的Tensor，或者在某一维上进行索引、切片来截取部分数据。无论操作的Tensor含有多少数据，这些操作都可以很快地完成，时间复杂度几乎为常数。显然，要做到这一点，必须共享这些派生出来的Tensor底层的数据。那么形状各异的Tensor是如何共享数据的呢？下面来介绍Tensor内部的基本概念。
 
 #### 1. Concepts
 
@@ -17,7 +17,7 @@ struct Tensor {
 ```
 
 - `Tensor::data`，浮点型数据的指针，指向储存数据的内存（这里只考虑数据是浮点数的情况）；
-- `Tensor::offset`，表示Tensor存储数据的开始地址到`Tensor::data`之间的偏移；
+- `Tensor::offset`，表示Tensor存储数据的开始地址到`Tensor::data`之间的偏移，也就是说`offset + data`得到的才是Tensor储存数据的开始地址；
 - `Tensor::ndim`，表示Tensor的维数，形状是`(2,3,4)`的Tensor，这个值就应该是3；
 - `Tensor::shape`，可以与`Tensor::ndim`配合，视为一个整型数组，存储着Tensor的形状。
 - `Tensor::stride`，与`Tensor::shape`类似，表示Tensor每一维的步长。
@@ -40,10 +40,10 @@ t.stride = new int[3]{12, 4, 1};
 其他各项都很直观，只有`t.stride`需要稍微找一下规律。
 
 1. `t.stride[2] = 1`就是设定如此；
-2. `t.stride[1] = 4`是因为`t.shape[2] = 4`；
-3. `t.stride[0] = 12`是因为`t.shape[1] * t.shape[2] = 12`。
+2. `t.stride[1] = 4`是从`t.shape[2] = 4`得到的；
+3. `t.stride[0] = 12`是从`t.shape[2] * t.shape[1] = 12`得到的。
 
-规范地把规律写出来就是：
+也就是说，最后一维的stride设置为1，其他维数的stride等于把此维度后的每一维的尺寸乘起来。规范地把规律写出来就是：
 $$
 t.stride[i] = \begin{cases}
 1, &\text{if } i=t.ndim-1, \\
@@ -89,7 +89,7 @@ data_t& get_value(Tensor& t, const std::vector<int>& inds) {
 }
 ```
 
-当然，我们可以在`get_value()`中加上一些Assert，对`inds`的长度及其元素的取值进行约束，这时候才需要用到`t.shape`。
+当然，我们可以在`get_value()`中加上一些Assert，对`inds`的长度及其取值进行约束，这时候才会用到`t.shape`。
 
 ##### 2.2 transpose
 
@@ -104,6 +104,7 @@ Tensor tranpose(const Tensor& t, int dim0, int dim1) {
         /*shape=*/new int[t.ndim], 
         /*stride=*/new int[t.ndim]
     };
+    // 分别复制t.shape和t.stride的值到nt.shape和nt.stride 
     for(int i = 0; i < nt.ndim; ++i) {
 		nt.shape[i] = t.shape[i];
         nt.stride[i] = t.stride[i];
@@ -184,6 +185,7 @@ Tensor view(const Tensor& t, const std::vector<int>& shape) {
         /*shape=*/new int[shape.size()],
         /*stride=*/new int[shape.size()]
 	};
+    // 下面的操作和之前init_stride()做的事情一样
     int stride = 1;
     for(int i = shape.size() - 1; i >= 0; --i) {
 		t.shape[i] = shape[i];
@@ -214,9 +216,11 @@ Tensor slice(const Tensor& t, int idx, int dim) {
 	Tensor nt {
 		/*data=*/t.data, 
         /*offset=*/t.offset + idx * t.stride[dim],
+        /*ndim=*/t.ndim - 1,
         /*shape=*/new int[t.ndim - 1],
         /*stride=*/new int[t.ndim - 1]
 	};
+    // 同样是复制t.stride和t.shape，只是需要跳过dim上的元素
     int i = 0;
     for(; i < dim; ++i) {
 		nt.shape[i] = t.shape[i];
@@ -232,9 +236,9 @@ Tensor slice(const Tensor& t, int idx, int dim) {
 
 ##### 2.5 切片
 
-切片和上面的索引类似，只是不会让Tensor减少一维，对应的Pytorch语句是`t[:, j0:j1, :]`。
+这里所说的切片和上面的索引类似，只是不会让Tensor减少一维，对应的Pytorch语句是`t[:, j0:j1, :]`。
 
-实现起来也和索引类似，`nt.stride`完全复制`t.stride`；`nt.shape`基本复制`t.shape`，只在做索引的维度上，根据`j0:j1`确定新值。具体实现代码如下：
+实现起来也和索引类似，`nt.stride`完全复制`t.stride`；`nt.shape`基本复制`t.shape`，只在做索引的维度上，根据`j0:j1`确定新值，这一维度上的尺寸通常会缩小。具体实现代码如下：
 
 ```c++
 Tensor slice(const Tensor& t, int start_idx, int end_idx, int dim) {
@@ -296,7 +300,7 @@ void init_stride(Tensor& t) {
 }
 ```
 
-首先，这样设置对正常取值是没有影响的，因为这一维的尺寸是1，那么能够取的索引值只有0，无论stride设置成怎样的值，这一维对偏移的贡献都是0。
+首先，这样设置对正常取值是没有影响的，因为这一维的尺寸是1，那么能够取的索引值只有0，无论stride设置成怎样的值，这一维对偏移的贡献都是0。因为上面的代码没有对传进来的参数进行检查，所以这一点没有体现出来。比如形状是`(2, 1, 4)`的Tensor，那么对它取值的时候，能取得索引值只有`[i, 0, k]`，也就是第二维上的值一定是0，那么这一维上的stride其实可以取任意值。
 
 其次，在broadcasting的场景中，考虑这样的一个运算：
 
@@ -327,4 +331,4 @@ t2[i, j, k] == t0[i, j, k] + t1[i, j, k]
 
 #### 3. My Implement
 
-在Simple-Tensor中，这部分对应的实现位于[include/tensor_impl.h](https://github.com/XuHQ1997/simple-tensor/blob/main/include/tensor/tensor_impl.h)和[src/tensor_impl.cpp](https://github.com/XuHQ1997/simple-tensor/blob/main/src/tensor/tensor_impl.cpp)中。因为用`Storage`封装了`Tensor::data`和`Tensor::offset`，用`Shape`封装了`Tensor::shape`，用`IndexArray`封装了`Tensor::stride`，并且进行了参数检查，所以代码稍有不同，但原理大致相同。还有其中关于自动求导的代码，放在其他文档中介绍。
+在Simple-Tensor中，这部分对应的实现位于[include/tensor_impl.h](https://github.com/XuHQ1997/simple-tensor/blob/main/include/tensor/tensor_impl.h)和[src/tensor_impl.cpp](https://github.com/XuHQ1997/simple-tensor/blob/main/src/tensor/tensor_impl.cpp)中。因为用`Storage`封装了`Tensor::data`和`Tensor::offset`，用`Shape`封装了`Tensor::shape`，用`IndexArray`封装了`Tensor::stride`，并且进行了参数检查，所以代码稍有不同，但原理大致相同。

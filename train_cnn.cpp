@@ -33,7 +33,7 @@ public:
         feat = s2_x3;
 
         st::Tensor y1 = linear1.forward(feat.view({
-            feat.size(0), 32*4*4
+            feat.size(0), 64*4*4
         }));
         st::Tensor y2 = linear2.forward(y1);
         return y2;
@@ -51,26 +51,31 @@ public:
         };
     }
 private:
-    st::nn::Conv2dWithReLU conv0{3, 16, {5, 5}, {2, 2}, {2, 2}};
+    st::nn::Conv2dWithReLU conv0{3, 32, {5, 5}, {2, 2}, {2, 2}};
 
-    st::nn::Conv2dWithReLU s1_conv1{16, 16, {3, 3}, {1, 1}, {1, 1}};
-    st::nn::Conv2dWithReLU s1_conv2{16, 16, {3, 3}, {1, 1}, {1, 1}};
+    st::nn::Conv2dWithReLU s1_conv1{32, 32, {3, 3}, {1, 1}, {1, 1}};
+    st::nn::Conv2dWithReLU s1_conv2{32, 32, {3, 3}, {1, 1}, {1, 1}};
     st::nn::MaxPool2d s1_pool{{2, 2}, {2, 2}, {0, 0}};
 
-    st::nn::Conv2dWithReLU s2_conv1{16, 32, {3, 3}, {1, 1}, {1, 1}};
-    st::nn::Conv2dWithReLU s2_conv2{32, 32, {3, 3}, {1, 1}, {1, 1}};
+    st::nn::Conv2dWithReLU s2_conv1{32, 64, {3, 3}, {1, 1}, {1, 1}};
+    st::nn::Conv2dWithReLU s2_conv2{64, 64, {3, 3}, {1, 1}, {1, 1}};
     st::nn::MaxPool2d s2_pool{{2, 2}, {2, 2}, {0, 0}};
 
-    st::nn::LinearWithReLU linear1{32*4*4, 256};
+    st::nn::LinearWithReLU linear1{64*4*4, 256};
     st::nn::Linear linear2{256, 10};
 };
 
 int main() {
     // config
-    constexpr index_t epoch = 4;
+    constexpr index_t epoch = 7;
     constexpr index_t batch_size = 64;
     constexpr data_t lr = 0.01;
     constexpr data_t momentum = 0.9;
+    
+    constexpr index_t lr_decay_factor = 0.1;
+    constexpr index_t lr_decay_epoch1 = 3;
+    constexpr index_t lr_decay_epoch2 = 5;
+
     constexpr index_t print_iters = 10;
 
     using namespace std::chrono;
@@ -110,6 +115,13 @@ int main() {
         std::cout << "Epoch " << i << " training..." << std::endl;
         std::cout << "total iters: " << train_dataset.n_batchs() << std::endl;
         train_dataset.shuffle();
+
+        if(i == lr_decay_epoch1 || i == lr_decay_epoch2) {
+            data_t lr = optimizer.lr();
+            optimizer.set_lr(lr * lr_decay_factor);
+            std::cout << "Lr decay to " << optimizer.lr() << std::endl;
+        }
+
         for(index_t j = 0; j < train_dataset.n_batchs(); ++j) {
             std::tie(n_samples, batch_samples, batch_labels) = 
                 train_dataset.get_batch(j);
