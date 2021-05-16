@@ -8,11 +8,11 @@
 
 ```c++
 struct Tensor {
-	double* data;
-	int* offset;
-	int ndim;
-	int* shape;
-	int* stride;
+    double* data;
+    int* offset;
+    int ndim;
+    int* shape;
+    int* stride;
 };
 ```
 
@@ -82,10 +82,10 @@ ASSERT(array3d[i][j][k] == array1d[i*12 + j*4 + k])
 
 ```c++
 data_t& get_value(Tensor& t, const std::vector<int>& inds) {
-	int offset = t.offset;
-	for(int i = 0; i < t.ndim; ++i)
-		offset += inds[i] * t.stride[i];
-	return t.data[offset];
+    int offset = t.offset;
+    for(int i = 0; i < t.ndim; ++i)
+        offset += inds[i] * t.stride[i];
+    return t.data[offset];
 }
 ```
 
@@ -99,14 +99,14 @@ data_t& get_value(Tensor& t, const std::vector<int>& inds) {
 
 ```c++
 Tensor tranpose(const Tensor& t, int dim0, int dim1) {
-	Tensor nt {
+    Tensor nt {
         /*data=*/t.data, /*offset=*/t.offset, /*ndim=*/t.ndim, 
         /*shape=*/new int[t.ndim], 
         /*stride=*/new int[t.ndim]
     };
     // 分别复制t.shape和t.stride的值到nt.shape和nt.stride 
     for(int i = 0; i < nt.ndim; ++i) {
-		nt.shape[i] = t.shape[i];
+        nt.shape[i] = t.shape[i];
         nt.stride[i] = t.stride[i];
     }
     std::swap(nt.shape[dim0], nt.shape[dim1]);
@@ -127,11 +127,11 @@ nt[i, j, k] == t[j, i, k]
 
 ```c++
 Tensor permute(const Tensor& t, const std::vector<int>& dims) {
-	Tensor nt {
-		/*data=*/t.data, /*offset=*/t.offset, /*ndim=*/t.ndim,
+    Tensor nt {
+        /*data=*/t.data, /*offset=*/t.offset, /*ndim=*/t.ndim,
         /*shape=*/new int[t.ndim],
         /*stride=*/new int[t.ndim]
-	};
+    };
     for(int i = 0; i < nt.ndim; ++i) {
         nt.shape[i] = t.shape[dims[i]];
         nt.stride[i] = t.stride[dims[i]];
@@ -180,15 +180,15 @@ $$
 
 ```c++
 Tensor view(const Tensor& t, const std::vector<int>& shape) {
-	Tensor nt {
-		/*data=*/t.data, /*offset=*/t.offset, /*ndim=*/shape.size(),
+    Tensor nt {
+        /*data=*/t.data, /*offset=*/t.offset, /*ndim=*/shape.size(),
         /*shape=*/new int[shape.size()],
         /*stride=*/new int[shape.size()]
-	};
+    };
     // 下面的操作和之前init_stride()做的事情一样
     int stride = 1;
     for(int i = shape.size() - 1; i >= 0; --i) {
-		t.shape[i] = shape[i];
+        t.shape[i] = shape[i];
         t.stride[i] = stride;
         stride *= shape[i];
     }
@@ -213,21 +213,21 @@ Tensor view(const Tensor& t, const std::vector<int>& shape) {
 
 ```c++
 Tensor slice(const Tensor& t, int idx, int dim) {
-	Tensor nt {
-		/*data=*/t.data, 
+    Tensor nt {
+        /*data=*/t.data, 
         /*offset=*/t.offset + idx * t.stride[dim],
         /*ndim=*/t.ndim - 1,
         /*shape=*/new int[t.ndim - 1],
         /*stride=*/new int[t.ndim - 1]
-	};
+    };
     // 同样是复制t.stride和t.shape，只是需要跳过dim上的元素
     int i = 0;
     for(; i < dim; ++i) {
-		nt.shape[i] = t.shape[i];
+        nt.shape[i] = t.shape[i];
         nt.stride[i] = t.stride[i];
     }
     for(; i < nt.ndim; ++i) {
-		nt.shape[i] = t.shape[i+1];
+        nt.shape[i] = t.shape[i+1];
         nt.stride[i] = t.stride[i+1];
     }
     return nt;
@@ -242,12 +242,12 @@ Tensor slice(const Tensor& t, int idx, int dim) {
 
 ```c++
 Tensor slice(const Tensor& t, int start_idx, int end_idx, int dim) {
-	Tensor nt {
-		/*data=*/t.data, 
+    Tensor nt {
+        /*data=*/t.data, 
         /*offset=*/t.offset + start_idx * t.stride[dim],
         /*shape=*/new int[t.ndim],
         /*stride=*/new int[t.ndim]
-	};
+    };
     for(int i = 0; i < nt.ndim; ++i) {
         nt.shape[i] = t.shape[i];
         nt.stride[i] = t.stride[i];

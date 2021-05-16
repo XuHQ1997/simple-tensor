@@ -52,16 +52,16 @@ for(int i = 0; i < 2; ++i)
 ```c++
 // 抽象类，作为多态中的基类
 struct Exp {
-	virtual double eval(int i, int j, int k) const = 0;
+    virtual double eval(int i, int j, int k) const = 0;
     virtual ~Exp() = default;
 };
 
 struct Tensor : public Exp {
-	// 省略了其他成员函数
+    // 省略了其他成员函数
     ...
-	// 重写基类的纯虚函数
+    // 重写基类的纯虚函数
     // 表示取自己[i,j,k]的元素
-	double eval(int i, int j, int k) const override {
+    double eval(int i, int j, int k) const override {
         return (*this)[i, j, k];
     }
     // 重载自己的赋值运算符，此时进行真正的运算
@@ -75,13 +75,13 @@ struct Tensor : public Exp {
 };
 
 struct AddExp : public Exp {
-	// 通过指针保存操作数
+    // 通过指针保存操作数
     Exp* loperand, roperand;
     // 构造函数，保存操作数
     AddExp(Exp* l, Exp* r) : loperand(l), roperand(r) {}
     // 重写基类的纯虚函数
     double eval(int i, int j, int k) const override {
-		return loperand->eval(i, j, k) + roperand->eval(i, j, k);
+        return loperand->eval(i, j, k) + roperand->eval(i, j, k);
     }
 };
 ```
@@ -112,25 +112,25 @@ CRTP的核心作于，将派生类作为基类模板的模板参数，从而使�
 ```c++
 template<typename Subtype>
 struct Exp {
-	// 这个self()函数是CRTP的精髓所在
+    // 这个self()函数是CRTP的精髓所在
     Subtype* self(void) {
         return static_cast<Subtype*>(this);
     };
     
     double eval(int i, int j, int k) const {
         // 将自己转成派生类，就可以调用派生类的eval函数了
-    	return self()->eval(i, j, k);
+        return self()->eval(i, j, k);
     }
 };
 
 struct Tensor : public Exp<Tensor> {
-	// 省略了其他成员函数
+    // 省略了其他成员函数
     ...
     // 实现eval()，需要保证接口和Exp里面的调用一致
-	double eval(int i, int j, int k) const {
+    double eval(int i, int j, int k) const {
         return (*this)[i, j, k];
     }
-	
+    
     // 因为Exp现在变成模板了，这里也要变成模板函数
     template<typename SubType>
     Tensor operator=(const Exp<SubType>& exp) {
@@ -143,15 +143,15 @@ struct Tensor : public Exp<Tensor> {
 
 template<typename LhsType, typename RhsType>
 struct AddExp : public Exp<AddExp<LhsType, RhsType>> {
-	// 通过指针保存操作数
+    // 通过指针保存操作数
     Exp<LhsType>* loperand;
     Exp<RhsType>* roperand;
     // 构造函数，保存操作数
     AddExp(Exp<LhsType>* l, Exp<RhsType>* r) 
-        	: loperand(l), roperand(r) {}
-	// 实现eval方法，必须保证接口一致
+            : loperand(l), roperand(r) {}
+    // 实现eval方法，必须保证接口一致
     double eval(int i, int j, int k) const {
-		return loperand->eval(i, j, k) + roperand->eval(i, j, k);
+        return loperand->eval(i, j, k) + roperand->eval(i, j, k);
     }
 };
 ```
@@ -201,32 +201,21 @@ AddExp* operator+(const Exp& e1, const Exp& e2) {
 ```c++
 template<typename Op, typename LhsType, typename RhsType>
 class BinaryExpImpl: public ExpImpl<BinaryExpImpl<Op, LhsType, RhsType>> {
-	// 省略一部分代码
-	...
-	// 实现eval函数，将具体计算委托给Op的静态函数，把操作数和索引传过去
-	// 这里的IndexArray& inds就相当与前面一直用的[i, j, k]
-	double eval(IndexArray& inds) const {
-		return Op<LhsType, RhsType>::eval(inds, lhs, rhs);
-	}
+    // 省略一部分代码
+    ...
+    // 实现eval函数，将具体计算委托给Op的静态函数，把操作数和索引传过去
+    // 这里的IndexArray& inds就相当与前面一直用的[i, j, k]
+    double eval(IndexArray& inds) const {
+        return Op<LhsType, RhsType>::eval(inds, lhs, rhs);
+    }
 };
 
 template<typename LhsType, typename RhsType>
 class Add {
-	static double eval(IndexArray& inds, LhsType& lhs, RhsType& rhs) {
-		return lhs.eval(inds) + rhs.eval(inds);
-	}
+    static double eval(IndexArray& inds, LhsType& lhs, RhsType& rhs) {
+        return lhs.eval(inds) + rhs.eval(inds);
+    }
 };
 ```
 
 因为现在数据构造在堆上，而且感觉`std::shared_ptr`不太好用，所以自己实现了`ExpImplPtr`来维护引用计数，控制何时析构对象，而且也在后面实现自动求导的时候发挥了作用。
-
-
-
-
-
-
-
-
-
-
-
